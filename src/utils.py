@@ -1,15 +1,4 @@
-from itertools import combinations
-
-from src.myenv import *
-
-import src.send_message as sm
-import src.myenv as myenv
-
-from pycaret.regression.oop import RegressionExperiment
-from pycaret.classification.oop import ClassificationExperiment
-from binance.client import Client
-
-from datetime import datetime, timedelta
+import sys
 import os
 import pandas as pd
 import plotly.express as px
@@ -17,6 +6,16 @@ import gc
 import logging
 import glob
 import pytz
+
+import src.send_message as sm
+import src.myenv as myenv
+import src.calcEMA as calc_utils
+
+from pycaret.regression.oop import RegressionExperiment
+from pycaret.classification.oop import ClassificationExperiment
+from binance.client import Client
+from itertools import combinations
+from datetime import datetime, timedelta
 
 log = logging.getLogger()
 
@@ -151,7 +150,7 @@ def get_best_parameters():
 
 def get_symbol_list():
   result = []
-  df = pd.read_csv(datadir + '/symbol_list.csv')
+  df = pd.read_csv(myenv.datadir + '/symbol_list.csv')
   for symbol in df['symbol']:
     result.append(symbol)
   return result
@@ -298,7 +297,7 @@ def date_parser(x):
   return pd.to_datetime(x, unit='ms')
 
 
-def read_data(dir, sep=';', all_cols=None, use_cols=use_cols) -> pd.DataFrame:
+def read_data(dir, sep=';', all_cols=None, use_cols=myenv.use_cols) -> pd.DataFrame:
   filenames = []
 
   for file in os.listdir(dir):
@@ -643,7 +642,7 @@ def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'],
   log.info(f'get_database: columns: {columns}')
   if os.path.exists(database_name):
     if parse_dates:
-      df_database = pd.read_csv(database_name, sep=';', parse_dates=date_features, date_parser=date_parser, decimal='.', usecols=columns, compression=dict(method='zip'))
+      df_database = pd.read_csv(database_name, sep=';', parse_dates=myenv.date_features, date_parser=date_parser, decimal='.', usecols=columns, compression=dict(method='zip'))
     else:
       df_database = pd.read_csv(database_name, sep=';', decimal='.', usecols=columns, compression=dict(method='zip'))
     df_database = parse_type_fields(df_database, parse_dates)
@@ -657,11 +656,11 @@ def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'],
 
 
 def get_database_name(symbol, interval):
-  return f'{datadir}/{symbol}/{symbol}_{interval}.dat'
+  return f'{myenv.datadir}/{symbol}/{symbol}_{interval}.dat'
 
 
 def download_data(save_database=True, parse_dates=False, interval='1h', start_date='2010-01-01'):
-  symbols = pd.read_csv(datadir + '/symbol_list.csv')
+  symbols = pd.read_csv(myenv.datadir + '/symbol_list.csv')
   for symbol in symbols['symbol']:
     get_data(symbol=symbol, save_database=save_database, interval=interval, columns=myenv.all_klines_cols, parse_dates=parse_dates, start_date=start_date)
 
@@ -684,7 +683,7 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
   if 'rsi' in columns:
     columns.remove('rsi')
   # log.info('get_klines: columns: ', columns)
-  df_klines = pd.DataFrame(data=klines, columns=all_klines_cols)[columns]
+  df_klines = pd.DataFrame(data=klines, columns=myenv.all_klines_cols)[columns]
   df_klines = parse_type_fields(df_klines, parse_dates=parse_dates)
   df_klines = adjust_index(df_klines)
   delta = datetime.now() - start_time
@@ -698,18 +697,18 @@ def parse_type_fields(df, parse_dates=False):
     if 'symbol' in df.columns:
       df['symbol'] = pd.Categorical(df['symbol'])
 
-    for col in float_kline_cols:
+    for col in myenv.float_kline_cols:
       if col in df.columns:
         if df[col].isna().sum() == 0:
           df[col] = df[col].astype('float32')
 
-    for col in integer_kline_cols:
+    for col in myenv.integer_kline_cols:
       if col in df.columns:
         if df[col].isna().sum() == 0:
           df[col] = df[col].astype('int16')
 
     if parse_dates:
-      for col in date_features:
+      for col in myenv.date_features:
         if col in df.columns:
           if df[col].isna().sum() == 0:
             df[col] = pd.to_datetime(df[col], unit='ms')
@@ -840,6 +839,78 @@ def regress_until_diff(data: pd.DataFrame, diff_percent: float, max_regression_p
   data[label] = pd.Categorical(data[label])
 
   return data
+
+
+def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, value: float, stop_loss=3.0, revert=False):
+  _data = df_predicted.copy()
+  _data.index = _data['open_time']
+  _data = _data[(_data.index >= start_date) & (_data.index <= end_date)]
+
+  cont = 0
+  cont_aviso = 101
+
+  purchased = False
+  purchase_price = 0.0
+  actual_price = 0.0
+  amount_invested = value
+  # balance = 0.0
+  take_profit_price = 0.0
+  stop_loss_price = 0.0
+  profit_and_loss = 0.0
+  operation = ''
+  margin = 0.0
+  margin_operation = 0.0
+  rsi = 0.0
+  latest_closed_candle_open_time_aux = None
+
+  for row_nu in range(1, _data.shape[0]):
+    actual_price = _data.iloc[row_nu:row_nu + 1]['close'].values[0]
+
+    # Start Buy Operation
+    if (not purchased):
+      rsi = _data.tail(1)['rsi'].values[0]
+      prediction_label = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]
+      operation = prediction_label.split('_')[0]
+      margin = float(prediction_label.split('_')[1])
+
+      if operation.startswith('SOBE') or operation.startswith('CAI'):
+        purchased = True
+        purchase_price = actual_price
+
+        if operation.startswith('CAI'):  # Short
+          take_profit_price = actual_price * (1 - margin / 100)
+          stop_loss_price = actual_price * (1 + (margin * myenv.stop_loss_multiplier) / 100)
+        elif operation.startswith('SOBE'):  # Long
+          take_profit_price = actual_price * (1 + margin / 100)
+          stop_loss_price = actual_price * (1 - (margin * myenv.stop_loss_multiplier) / 100)
+
+        log.info(f'Operation: {operation} - Perform BUY:' +
+                 f'- Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
+                 f'- Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - PnL: $ {profit_and_loss:.2f} - Margin Operation: {margin_operation:.2f}%')
+        continue
+    # Ends Buy Operation
+
+    # Starts Sell Operation
+    if purchased:
+      perform_sell = False
+      if operation.startswith('SOBE'):
+        margin = (actual_price - purchase_price) / purchase_price
+        if ((actual_price >= take_profit_price) or (actual_price <= stop_loss_price)):  # Long ==> Sell - Take Profit / Stop Loss
+          perform_sell = True
+      elif operation.startswith('CAI'):
+        margin = (purchase_price - actual_price) / purchase_price
+        if ((actual_price <= take_profit_price) or (actual_price >= stop_loss_price)):  # Short ==> Sell - Take Profit / Stop Loss
+          perform_sell = True
+
+      profit_and_loss = amount_invested * margin
+
+      if perform_sell:  # Register Sell
+        amount_invested += profit_and_loss
+        log.info(f'Operation: {operation} - Perform SELL: {perform_sell}' +
+                 f' - Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
+                 f' - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - Margin: {100*margin:.2f} - PnL: $ {profit_and_loss:.2f}' +
+                 f' - Margin Operation: {margin_operation:.2f}%')
+    # Ends Sell Operation
 
 
 def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, value: float, stop_loss=3.0, revert=False):
