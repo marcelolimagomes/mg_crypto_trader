@@ -160,7 +160,7 @@ def main(args):
 
   if update_database:
     logger.info('start_batch_training: Updating database...')
-    download_data(save_database=True, parse_data=False)
+    download_data(save_database=True, parse_dates=False)
     logger.info('start_batch_training: Database updated...')
 
   bt = BatchTrain(

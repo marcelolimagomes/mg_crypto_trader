@@ -34,7 +34,7 @@ class TrainBestModel:
             interval=param['interval'],
             tail=-1,
             columns=myenv.all_cols,
-            parse_data=True,
+            parse_dates=True,
             updata_data_from_web=True)
       except Exception as e:
         self.log.error(e)

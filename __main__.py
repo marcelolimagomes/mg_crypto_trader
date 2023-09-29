@@ -73,7 +73,7 @@ def main(args):
   if '-download-data' in args:
     for interval in interval_list:
       log.info(f'Starting download data, in interval ({interval}) for all Symbols in database...')
-      utils.download_data(save_database=True, parse_data=False, interval=interval, start_date=start_date)
+      utils.download_data(save_database=True, parse_dates=False, interval=interval, start_date=start_date)
     sys.exit(0)
 
   if '-prepare-best-parameters' in args:

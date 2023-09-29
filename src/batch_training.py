@@ -87,7 +87,7 @@ class BatchTrain:
             interval=interval,
             tail=-1,
             columns=myenv.all_cols,
-            parse_data=True,
+            parse_dates=True,
             updata_data_from_web=self._update_data_from_web,
             start_date=self._start_train_date)
 

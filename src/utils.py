@@ -9,15 +9,46 @@ from pycaret.regression.oop import RegressionExperiment
 from pycaret.classification.oop import ClassificationExperiment
 from binance.client import Client
 
-import datetime
+from datetime import datetime, timedelta
 import os
 import pandas as pd
 import plotly.express as px
 import gc
 import logging
 import glob
+import pytz
 
 log = logging.getLogger()
+
+
+def get_start_timestamp_for_interval(interval):
+  date = None
+  match interval:
+    case '1m':
+      date = datetime.now(pytz.utc) - timedelta(days=30 * 3)  # 3 Months
+    case '5m':
+      date = datetime.now(pytz.utc) - timedelta(days=30 * 9)  # 9 Months
+    case '15m':
+      date = datetime.now(pytz.utc) - timedelta(days=365 * 2)  # 2 Years
+    case '30m':
+      date = datetime.now(pytz.utc) - timedelta(days=365 * 3)  # 3 Years
+    case '1h':
+      date = datetime.now(pytz.utc) - timedelta(days=365 * 5)  # 5 Years
+
+  return int(date.timestamp() * 1000)
+
+
+def reduce_database(interval_list=['1m', '5m', '15m', '30m', '1h']):
+  for symbol in get_symbol_list():
+    for interval in interval_list:
+      data_file = f'{myenv.datadir}/{symbol}/{symbol}_{interval}.dat'
+      parsed_date = get_start_timestamp_for_interval(interval)
+      print(data_file)
+      data = get_data(symbol=symbol, save_database=False, interval=interval, columns=myenv.all_klines_cols, parse_dates=False)
+      data.info()
+      data = data[(data['open_time'] >= parsed_date)]
+      data.info()
+      data.to_csv(data_file, sep=';', index=False, compression=dict(method='zip'))
 
 
 def get_account_balance():
@@ -31,7 +62,7 @@ def get_account_balance():
 def register_account_balance(balance):
   filename = f'{myenv.datadir}/account_balance.dat'
   params = {}
-  params['operation_date'] = int(datetime.datetime.now().timestamp() * 1000)
+  params['operation_date'] = int(datetime.now().timestamp() * 1000)
   params['balance'] = balance
   data = pd.DataFrame(data=[params], index=[0])
   if os.path.exists(filename):
@@ -65,7 +96,7 @@ def get_latest_operation(symbol, interval):
 
 
 def get_params_operation(symbol, interval, buy_or_sell, amount_invested, balance, take_profit, stop_loss, purchase_price, sell_price, profit_and_loss, rsi, operation):
-  params_operation = {'operation_date': int(datetime.datetime.now().timestamp() * 1000),
+  params_operation = {'operation_date': int(datetime.now().timestamp() * 1000),
                       'symbol': symbol,
                       'interval': interval,
                       'operation': buy_or_sell,
@@ -598,24 +629,24 @@ def regresstion_times(df_database, regression_features=['close'], regression_tim
 
 
 def get_max_date(df_database, start_date='2010-01-01'):
-  max_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+  max_date = datetime.strptime(start_date, '%Y-%m-%d')
   if df_database is not None and df_database.shape[0] > 0:
     max_date = pd.to_datetime(df_database['open_time'].max(), unit='ms')
   return max_date
 
 
-def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'], parse_data=True):
+def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'], parse_dates=True):
   database_name = get_database_name(symbol, interval)
   log.info(f'get_database: name: {database_name}')
 
   df_database = pd.DataFrame()
   log.info(f'get_database: columns: {columns}')
   if os.path.exists(database_name):
-    if parse_data:
+    if parse_dates:
       df_database = pd.read_csv(database_name, sep=';', parse_dates=date_features, date_parser=date_parser, decimal='.', usecols=columns, compression=dict(method='zip'))
-      df_database = parse_type_fields(df_database)
     else:
       df_database = pd.read_csv(database_name, sep=';', decimal='.', usecols=columns, compression=dict(method='zip'))
+    df_database = parse_type_fields(df_database, parse_dates)
     df_database = adjust_index(df_database)
     df_database = df_database[columns]
   if tail > 0:
@@ -629,10 +660,10 @@ def get_database_name(symbol, interval):
   return f'{datadir}/{symbol}/{symbol}_{interval}.dat'
 
 
-def download_data(save_database=True, parse_data=False, interval='1h', start_date='2010-01-01'):
+def download_data(save_database=True, parse_dates=False, interval='1h', start_date='2010-01-01'):
   symbols = pd.read_csv(datadir + '/symbol_list.csv')
   for symbol in symbols['symbol']:
-    get_data(symbol=symbol, save_database=save_database, interval=interval, columns=myenv.all_klines_cols, parse_data=parse_data, start_date=start_date)
+    get_data(symbol=symbol, save_database=save_database, interval=interval, columns=myenv.all_klines_cols, parse_dates=parse_dates, start_date=start_date)
 
 
 def adjust_index(df):
@@ -643,9 +674,9 @@ def adjust_index(df):
   return df
 
 
-def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_data=True):
+def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
   # return pd.DataFrame()
-  start_time = datetime.datetime.now()
+  start_time = datetime.now()
   client = Client()
   klines = client.get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
   if 'symbol' in columns:
@@ -654,10 +685,9 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
     columns.remove('rsi')
   # log.info('get_klines: columns: ', columns)
   df_klines = pd.DataFrame(data=klines, columns=all_klines_cols)[columns]
-  if parse_data:
-    df_klines = parse_type_fields(df_klines, parse_dates=True)
+  df_klines = parse_type_fields(df_klines, parse_dates=parse_dates)
   df_klines = adjust_index(df_klines)
-  delta = datetime.datetime.now() - start_time
+  delta = datetime.now() - start_time
   # Print the delta time in days, hours, minutes, and seconds
   log.info(f'get_klines: shape: {df_klines.shape} - Delta time: {delta.seconds % 60} seconds')
   return df_klines
@@ -690,12 +720,14 @@ def parse_type_fields(df, parse_dates=False):
   return df
 
 
-def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open_time', 'close'], parse_data=True, updata_data_from_web=True, start_date='2010-01-01'):
+def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open_time', 'close'], parse_dates=True, updata_data_from_web=True, start_date='2010-01-01'):
   database_name = get_database_name(symbol, interval)
   log.info(f'get_data: Loading database: {database_name}')
-  df_database = get_database(symbol=symbol, interval=interval, tail=tail, columns=columns, parse_data=parse_data)
+  df_database = get_database(symbol=symbol, interval=interval, tail=tail, columns=columns, parse_dates=parse_dates)
+  log.info(f'Shape database on disk: {df_database.shape}')
+
   log.info(f'Filtering start date: {start_date}')
-  if parse_data:
+  if parse_dates:
     df_database = df_database[df_database['open_time'] >= start_date]
     log.info(f'New shape after filtering start date. Shape: {df_database.shape}')
 
@@ -710,7 +742,7 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
       max_date_aux = get_max_date(df_database, start_date=start_date)
       log.info(f'get_data: Max date database: {max_date_aux}')
 
-      df_klines = get_klines(symbol, interval=interval, max_date=max_date_aux.strftime('%Y-%m-%d'), columns=columns, parse_data=parse_data)
+      df_klines = get_klines(symbol, interval=interval, max_date=max_date_aux.strftime('%Y-%m-%d'), columns=columns, parse_dates=parse_dates)
       df_database = pd.concat([df_database, df_klines])
       df_database.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
       df_database.sort_index(inplace=True)
@@ -723,6 +755,8 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
       os.makedirs(database_name.removesuffix(sulfix_name))
     df_database.to_csv(database_name, sep=';', index=False, compression=dict(method='zip'))
     log.info(f'get_data: Database updated at {database_name}')
+
+  log.info(f'New shape after get_data: {df_database.shape}')
   return df_database
 
 
@@ -900,7 +934,7 @@ def save_results(model_name,
     df_resultado_simulacao = pd.DataFrame()
 
   result_simulado = {}
-  result_simulado['data'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  result_simulado['data'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
   result_simulado['symbol'] = symbol
   result_simulado['interval'] = interval
   result_simulado['estimator'] = estimator

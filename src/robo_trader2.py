@@ -113,7 +113,7 @@ class RoboTrader():
 
   def update_data_from_web(self):
     self.log.debug(f'Getting data from web. all_data shape: {self._all_data.shape}')
-    df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=self._kline_features, parse_data=True)
+    df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=self._kline_features, parse_dates=True)
     # df_klines['symbol'] = self._symbol
     self.log.debug(f'df_klines shape: {df_klines.shape}')
     df_klines.info() if self._verbose else None

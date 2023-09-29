@@ -60,7 +60,7 @@ class BatchRoboTrader:
             interval=param['interval'],
             tail=-1,
             columns=myenv.all_cols,
-            parse_data=True,
+            parse_dates=True,
             updata_data_from_web=False,
             start_date=self._start_date)
       except Exception as e:

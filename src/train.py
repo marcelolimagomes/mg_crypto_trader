@@ -332,7 +332,7 @@ def main(args):
       if (arg.startswith('-download-data')):
         sm.send_status_to_telegram('Iniciando MG Crypto Trader...')
         sm.send_status_to_telegram('Atualizando base de dados')
-        download_data(save_database=True, parse_data=False)
+        download_data(save_database=True, parse_dates=False)
         sm.send_status_to_telegram('Base atualizada')
         sys.exit()
 
