@@ -846,14 +846,13 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
   _data.index = _data['open_time']
   _data = _data[(_data.index >= start_date) & (_data.index <= end_date)]
 
-  cont = 0
-  cont_aviso = 101
+  log.debug(f'Start Simule Trading: {start_date} - {end_date} - Shape: {_data.shape}')
 
   purchased = False
   purchase_price = 0.0
   actual_price = 0.0
   amount_invested = value
-  # balance = 0.0
+  balance = value
   take_profit_price = 0.0
   stop_loss_price = 0.0
   profit_and_loss = 0.0
@@ -861,32 +860,36 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
   margin = 0.0
   margin_operation = 0.0
   rsi = 0.0
-  latest_closed_candle_open_time_aux = None
 
   for row_nu in range(1, _data.shape[0]):
     actual_price = _data.iloc[row_nu:row_nu + 1]['close'].values[0]
+    operation = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]
+    amount_invested = balance
+    # log.debug(f'Actual Price: $ {actual_price:.6f} - Operation: {operation} - Purchased: {purchased}')
 
+    rsi = _data.iloc[row_nu:row_nu + 1]['rsi'].values[0]
     # Start Buy Operation
     if (not purchased):
-      rsi = _data.tail(1)['rsi'].values[0]
       prediction_label = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]
-      operation = prediction_label.split('_')[0]
-      margin = float(prediction_label.split('_')[1])
+      if prediction_label.startswith('SOBE') or prediction_label.startswith('CAI'):
+        operation = prediction_label.split('_')[0]
+        margin_operation = float(prediction_label.split('_')[1])
 
       if operation.startswith('SOBE') or operation.startswith('CAI'):
         purchased = True
         purchase_price = actual_price
 
         if operation.startswith('CAI'):  # Short
-          take_profit_price = actual_price * (1 - margin / 100)
-          stop_loss_price = actual_price * (1 + (margin * myenv.stop_loss_multiplier) / 100)
+          take_profit_price = actual_price * (1 - margin_operation / 100)
+          stop_loss_price = actual_price * (1 + (margin_operation * myenv.stop_loss_multiplier) / 100)
         elif operation.startswith('SOBE'):  # Long
-          take_profit_price = actual_price * (1 + margin / 100)
-          stop_loss_price = actual_price * (1 - (margin * myenv.stop_loss_multiplier) / 100)
+          take_profit_price = actual_price * (1 + margin_operation / 100)
+          stop_loss_price = actual_price * (1 - (margin_operation * myenv.stop_loss_multiplier) / 100)
 
-        log.info(f'Operation: {operation} - Perform BUY:' +
-                 f'- Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
-                 f'- Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - PnL: $ {profit_and_loss:.2f} - Margin Operation: {margin_operation:.2f}%')
+        log.debug(f'\nOperation: {operation} - Perform >>> BUY <<<' +
+                  f' - Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
+                  f' - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - PnL: $ {profit_and_loss:.2f}' +
+                  f' - Margin Operation: {margin_operation:.2f}% - RSI: {rsi:.2f} - Balance: $ {balance:.2f}')
         continue
     # Ends Buy Operation
 
@@ -905,12 +908,17 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
       profit_and_loss = amount_invested * margin
 
       if perform_sell:  # Register Sell
-        amount_invested += profit_and_loss
-        log.info(f'Operation: {operation} - Perform SELL: {perform_sell}' +
-                 f' - Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
-                 f' - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - Margin: {100*margin:.2f} - PnL: $ {profit_and_loss:.2f}' +
-                 f' - Margin Operation: {margin_operation:.2f}%')
+        balance += profit_and_loss
+        log.debug(f'\nOperation: {operation} - Perform >>> SELL <<<' +
+                  f' - Actual Price: $ {actual_price:.6f} - Purchased Price: $ {purchase_price:.6f} - Amount Invested: $ {amount_invested:.2f}' +
+                  f' - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - Margin: {100*margin:.2f} - PnL: $ {profit_and_loss:.2f}' +
+                  f' - Margin Operation: {margin_operation:.2f}%  RSI: {rsi:.2f} - Balance: $ {balance:.2f}')
+        # Reset variables
+        purchased, purchase_price, amount_invested, take_profit_price, stop_loss_price, profit_and_loss, margin, margin_operation = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
     # Ends Sell Operation
+  log.info(f'>>> Balance: $ {balance:.2f}')
+  return balance
 
 
 def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, value: float, stop_loss=3.0, revert=False):
