@@ -264,10 +264,12 @@ class RoboTrader():
       take_profit_price = float(params_operation['take_profit'])
       stop_loss_price = float(params_operation['stop_loss'])
       operation = params_operation['status']
-      latest_closed_candle_open_time_aux = pd.to_datetime(params_operation["operation_date"], unit='ms').strftime('%Y-%m-%d %H:%M:%S')
+      latest_closed_candle_open_time_aux = params_operation["operation_date"]
       amount_invested = float(params_operation['amount_invested'])
       rsi = float(params_operation['rsi'])
-      self.log_buy(latest_closed_candle_open_time_aux, operation, purchase_price, amount_invested, balance)
+      margin_operation = round(((purchase_price - take_profit_price) / purchase_price) * 100, 2)
+
+      self.log_buy(latest_closed_candle_open_time_aux, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price)
 
     error = False
     while True:
