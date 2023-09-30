@@ -297,7 +297,7 @@ class RoboTrader():
             self.log.info(f'\nOperation: {operation} - Perform BUY: {self.validate_short_or_long(operation)}' +
                           f'\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}\nAmount Invested: $ {amount_invested:.2f}' +
                           f'\nTake Profit: $ {take_profit_price:.6f}\nStop Loss: $ {stop_loss_price:.6f}\nPnL: $ {profit_and_loss:.2f}' +
-                          f'\nMargin Operation: {margin_operation:.2f}%\nBalance: $ {balance:.2f}')
+                          f'\nMargin Operation: {margin_operation:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
             continue
 
         if purchased:  # and (operation.startswith('SOBE') or operation.startswith('CAI')):
@@ -315,7 +315,7 @@ class RoboTrader():
           self.log.info(f'\nOperation: {operation} - Perform SELL: {perform_sell}' +
                         f'\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}\nAmount Invested: $ {amount_invested:.2f}' +
                         f'\nTake Profit: $ {take_profit_price:.6f}\nStop Loss: $ {stop_loss_price:.6f}\nMargin: {100*margin:.2f}\nPnL: $ {profit_and_loss:.2f}' +
-                        f'\nMargin Operation: {margin_operation:.2f}%\nBalance: $ {balance:.2f}')
+                        f'\nMargin Operation: {margin_operation:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
 
           if perform_sell:  # Register Sell
             balance += (amount_invested + profit_and_loss)
