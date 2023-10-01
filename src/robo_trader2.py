@@ -193,20 +193,20 @@ class RoboTrader():
     self.log.info(f'{msg}')
     sm.send_status_to_telegram(msg)
 
-  def log_buy(self, open_time, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price):
+  def log_buy(self, open_time, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price, rsi):
     _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
     msg = f'*BUYING*: Symbol: {self._symbol}_{self._interval} - Open Time: {_open_time} - Operation: {operation} - Target Margin: {margin_operation:.2f}% - '
     msg += f'Purchased Price: $ {purchase_price:.6f} - Amount invested: $ {amount_invested:.2f} - Take Profit: $ {take_profit_price:.6f} - '
-    msg += f'Stop Loss: $ {stop_loss_price:.6f} - Balance: $ {balance:.2f}'
+    msg += f'Stop Loss: $ {stop_loss_price:.6f} - RSI: {rsi:.2f} - Balance: $ {balance:.2f}'
     self.log.info(f'{msg}')
     sm.send_to_telegram(msg)
 
   def log_selling(self, open_time, operation, purchase_price, actual_price, margin, amount_invested, profit_and_loss, balance, take_profit_price,
-                  stop_loss_price, margin_operation):
+                  stop_loss_price, margin_operation, rsi):
     _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
     msg = f'*SELLING*: Symbol: {self._symbol}_{self._interval} - Open Time: {_open_time} - Operation: {operation} - Target Margin: {margin_operation:.2f}% '
     msg += f'- Purchased Price: $ {purchase_price:.6f} - Actual Price: $ {actual_price:.6f} - Margin: {100*margin:.2f}% - Amount invested: $ {amount_invested:.2f} '
-    msg += f'- PnL: $ {profit_and_loss:.2f} - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - Balance: $ {balance:.2f}'
+    msg += f'- PnL: $ {profit_and_loss:.2f} - Take Profit: $ {take_profit_price:.6f} - Stop Loss: $ {stop_loss_price:.6f} - RSI: {rsi:.2f} - Balance: $ {balance:.2f}'
     self.log.info(f'{msg}')
     sm.send_to_telegram(msg)
 
@@ -267,9 +267,9 @@ class RoboTrader():
       latest_closed_candle_open_time_aux = params_operation["operation_date"]
       amount_invested = float(params_operation['amount_invested'])
       rsi = float(params_operation['rsi'])
-      margin_operation = round(((purchase_price - take_profit_price) / purchase_price) * 100, 2)
+      margin_operation = round(((take_profit_price - purchase_price) / purchase_price) * 100, 2)
 
-      self.log_buy(latest_closed_candle_open_time_aux, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price)
+      self.log_buy(latest_closed_candle_open_time_aux, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price, rsi)
 
     error = False
     while True:
@@ -293,7 +293,7 @@ class RoboTrader():
             params_operation = utils.get_params_operation(self._symbol, self._interval, 'BUY', amount_invested, balance, take_profit_price, stop_loss_price,
                                                           purchase_price, 0.0, 0.0, rsi, operation)
             utils.register_operation(params_operation)
-            self.log_buy(latest_closed_candle_open_time, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price)
+            self.log_buy(latest_closed_candle_open_time, operation, purchase_price, amount_invested, balance, margin_operation, take_profit_price, stop_loss_price, rsi)
             self.log.info(f'\nOperation: {operation} - Perform BUY: {self.validate_short_or_long(operation)}' +
                           f'\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}\nAmount Invested: $ {amount_invested:.2f}' +
                           f'\nTake Profit: $ {take_profit_price:.6f}\nStop Loss: $ {stop_loss_price:.6f}\nPnL: $ {profit_and_loss:.2f}' +
@@ -324,7 +324,7 @@ class RoboTrader():
                                                           purchase_price, actual_price, profit_and_loss, rsi, operation)
             utils.register_operation(params_operation)
             self.log_selling(latest_closed_candle_open_time, operation, purchase_price, actual_price, margin, amount_invested, profit_and_loss, balance,
-                             take_profit_price, stop_loss_price, margin_operation)
+                             take_profit_price, stop_loss_price, margin_operation, rsi)
             # Reset variables
             purchased, purchase_price, amount_invested, take_profit_price, stop_loss_price, profit_and_loss, margin, margin_operation = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       except Exception as e:
