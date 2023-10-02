@@ -280,7 +280,7 @@ class RoboTrader():
         actual_price, latest_closed_candle_open_time = self.update_data_from_web()
 
         # Apply predict only on time per interval
-        if (not purchased) and (latest_closed_candle_open_time_aux != latest_closed_candle_open_time):
+        if (not purchased) and (latest_closed_candle_open_time_aux != latest_closed_candle_open_time) and (balance > 0):
           latest_closed_candle_open_time_aux = latest_closed_candle_open_time
           rsi = self.feature_engineering_on_loop()
           operation, margin_operation = self.predict_operation()
