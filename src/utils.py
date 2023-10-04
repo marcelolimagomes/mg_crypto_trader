@@ -21,6 +21,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+import numpy as np
+
 log = logging.getLogger()
 
 
@@ -113,8 +115,9 @@ def get_latest_operation(symbol, interval):
     return None
 
 
-def get_params_operation(symbol, interval, operation, target_margin, amount_invested, take_profit, stop_loss, purchase_price, sell_price, profit_and_loss, rsi, margin_operation, balance):
-  params_operation = {'operation_date': datetime.now(),
+def get_params_operation(operation_date, symbol, interval, operation, target_margin, amount_invested, take_profit, stop_loss, purchase_price, rsi, sell_price,
+                         profit_and_loss, margin_operation, strategy, balance):
+  params_operation = {'operation_date': datetime.fromtimestamp(int(operation_date.astype(np.int64)) / 1000000000),
                       'symbol': symbol,
                       'interval': interval,
                       'operation': operation,
@@ -127,6 +130,7 @@ def get_params_operation(symbol, interval, operation, target_margin, amount_inve
                       'pnl': profit_and_loss,
                       'rsi': rsi,
                       'margin_operation': margin_operation,
+                      'strategy': strategy,
                       'balance': balance}
   return params_operation
 
@@ -708,7 +712,7 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
   df_klines = adjust_index(df_klines)
   delta = datetime.now() - start_time
   # Print the delta time in days, hours, minutes, and seconds
-  log.info(f'get_klines: shape: {df_klines.shape} - Delta time: {delta.seconds % 60} seconds')
+  log.debug(f'get_klines: shape: {df_klines.shape} - Delta time: {delta.seconds % 60} seconds')
   return df_klines
 
 

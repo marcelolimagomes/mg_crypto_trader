@@ -1,12 +1,16 @@
+import sqlite3
 import sqlalchemy
-print(f'sqlalchemy: {sqlalchemy.__version__}')
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from typing import Optional
 from datetime import datetime
 import sys
-
 import src.myenv as myenv
+
+
+conn = sqlite3.connect(f'{sys.path[0]}/db/mg_trader.db')
+print(conn.__dir__)
+conn.close()
 
 url = f'sqlite:///{sys.path[0]}/db/mg_trader.db'
 engine = create_engine(url, echo=False)
@@ -31,7 +35,6 @@ class Ledger(Base):
   # operation_date;symbol;interval;operation;amount_invested;balance;take_profit;stop_loss;purchase_price;sell_price;PnL;rsi;status
 
   id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-  operation_date: Mapped[datetime]
   symbol: Mapped[str]
   interval: Mapped[str]
   operation: Mapped[str]
@@ -45,6 +48,8 @@ class Ledger(Base):
   rsi: Mapped[float]
   margin_operation: Mapped[float]
   balance: Mapped[float]
+  strategy: Mapped[str]
+  operation_date: Mapped[datetime]
   created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
   # __mapper_args__ = {"sqlite_autoincrement": True, }
