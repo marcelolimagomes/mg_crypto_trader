@@ -158,5 +158,5 @@ class BatchRoboTrader:
               new_thread.start()
               thread_list.append(new_thread)
       # End Thread Validation
-      time.sleep(myenv.sleep_refresh)
+      time.sleep(60)
     # End While

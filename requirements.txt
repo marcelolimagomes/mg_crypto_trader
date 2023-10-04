@@ -1,3 +1,4 @@
 pycaret[full]
 python-binance
 sqlalchemy
+sqlalchemy.orm

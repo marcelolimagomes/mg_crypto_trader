@@ -35,8 +35,9 @@ symbol = 'BTCUSDT'
 saldo_inicial = 100
 stop_loss_multiplier = 2
 default_amount_invested = 100
+initial_amount_balance = 10000
 
-sleep_refresh = 3  # seconds
+sleep_refresh = 5  # seconds
 
 producao = True
 

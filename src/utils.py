@@ -7,6 +7,7 @@ import logging
 import glob
 import pytz
 
+from src.models import models
 import src.send_message as sm
 import src.myenv as myenv
 import src.calcEMA as calc_utils
@@ -16,6 +17,9 @@ from pycaret.classification.oop import ClassificationExperiment
 from binance.client import Client
 from itertools import combinations
 from datetime import datetime, timedelta
+
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
 log = logging.getLogger()
 
@@ -51,63 +55,79 @@ def reduce_database(interval_list=['1m', '5m', '15m', '30m', '1h']):
 
 
 def get_account_balance():
-  filename = f'{myenv.datadir}/account_balance.dat'
-  if os.path.exists(filename):
-    data = pd.read_csv(filename, sep=';')
-    data.sort_values('operation_date', inplace=True)
-    return data.tail(1).to_dict(orient='records')[0]
+  with Session(models.engine) as session:
+    ab = session.query(models.AccountBalance).order_by(desc(models.AccountBalance.id)).first()
+  session.close()
+  return ab.balance
 
 
-def register_account_balance(balance):
-  filename = f'{myenv.datadir}/account_balance.dat'
-  params = {}
-  params['operation_date'] = int(datetime.now().timestamp() * 1000)
-  params['balance'] = balance
-  data = pd.DataFrame(data=[params], index=[0])
-  if os.path.exists(filename):
-    base = pd.read_csv(filename, sep=';')
-    data = pd.concat([base, data], ignore_index=True)
-    data.sort_values('operation_date', inplace=True)
-  data.to_csv(filename, sep=';', index=False)
+def register_account_balance(profit_and_loss):
+  session = Session(models.engine)
+  transaction = session.begin()
+  ab = session.query(models.AccountBalance).with_for_update().order_by(desc(models.AccountBalance.id)).first()
+  balance = ab.balance + profit_and_loss
+  new_ab = models.AccountBalance(balance=balance)
+  session.add(new_ab)
+  transaction.commit()
+  session.close()
+
+
+def get_amount_to_invest(register=True):
+  session = Session(models.engine)
+  transaction = session.begin()
+  ab = session.query(models.AccountBalance).with_for_update().order_by(desc(models.AccountBalance.id)).first()
+  balance = ab.balance
+  amount_invested = 0.0
+
+  if balance >= myenv.default_amount_invested:
+    amount_invested = myenv.default_amount_invested
+  elif balance > 0 and balance < myenv.default_amount_invested:
+    amount_invested = balance
+  balance -= amount_invested
+  if register:
+    new_ab = models.AccountBalance(balance=balance)
+    session.add(new_ab)
+  transaction.commit()
+  session.close()
+
+  return amount_invested, balance
 
 
 def register_operation(params):
-  filename = f'{myenv.datadir}/ledger.dat'
-  data = pd.DataFrame(data=[params], index=[0])
-  if os.path.exists(filename):
-    base = pd.read_csv(filename, sep=';')
-    data = pd.concat([base, data], ignore_index=True)
-    data.sort_values('operation_date', inplace=True)
-  data.to_csv(filename, sep=';', index=False)
+  session = Session(models.engine)
+  transaction = session.begin()
+  ledger = models.Ledger(**params)
+  session.add(ledger)
+  transaction.commit()
+  session.close()
 
 
 def get_latest_operation(symbol, interval):
-  filename = f'{myenv.datadir}/ledger.dat'
-  if os.path.exists(filename):
-    data = pd.read_csv(filename, sep=';')
-    if data.shape[0] > 0:
-      data.sort_values('operation_date', inplace=True)
-      data = data[(data['symbol'] == symbol) & (data['interval'] == interval)]
-      if data.shape[0] > 0:
-        return data.tail(1).to_dict(orient='records')[0]
-
-  return []
+  try:
+    with Session(models.engine) as session:
+      ledger = session.query(models.Ledger).filter(models.Ledger.symbol == symbol, models.Ledger.interval == interval).order_by(
+        desc(models.Ledger.id)).first()
+      return ledger
+  except Exception as e:
+    log.exception(e)
+    return None
 
 
-def get_params_operation(symbol, interval, buy_or_sell, amount_invested, balance, take_profit, stop_loss, purchase_price, sell_price, profit_and_loss, rsi, operation):
-  params_operation = {'operation_date': int(datetime.now().timestamp() * 1000),
+def get_params_operation(symbol, interval, operation, target_margin, amount_invested, take_profit, stop_loss, purchase_price, sell_price, profit_and_loss, rsi, margin_operation, balance):
+  params_operation = {'operation_date': datetime.now(),
                       'symbol': symbol,
                       'interval': interval,
-                      'operation': buy_or_sell,
-                      'amount_invested': f'{amount_invested:.2f}',
-                      'balance': f'{balance:.2f}',
-                      'take_profit': f'{take_profit:.6f}',
-                      'stop_loss': f'{stop_loss:.6f}',
-                      'purchase_price': f'{purchase_price:.6f}',
-                      'sell_price': f'{sell_price:.6f}',
-                      'PnL': f'{profit_and_loss:.6f}',
-                      'rsi': f'{rsi:.2f}',
-                      'status': operation}
+                      'operation': operation,
+                      'target_margin': target_margin,
+                      'amount_invested': amount_invested,
+                      'take_profit': take_profit,
+                      'stop_loss': stop_loss,
+                      'purchase_price': purchase_price,
+                      'sell_price': sell_price,
+                      'pnl': profit_and_loss,
+                      'rsi': rsi,
+                      'margin_operation': margin_operation,
+                      'balance': balance}
   return params_operation
 
 
