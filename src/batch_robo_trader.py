@@ -10,6 +10,8 @@ import threading
 import os
 import time
 
+mutex = threading.Lock()
+
 
 class BatchRoboTrader:
   def __init__(self,
@@ -106,7 +108,8 @@ class BatchRoboTrader:
           'calc_rsi': '-calc-rsi' in robo_trader_params['arguments'],
           'verbose': self._verbose,
           'arguments': robo_trader_params['arguments'],
-          'log_level': self._log_level}
+          'log_level': self._log_level,
+          'mutex': mutex}
       robo_trader_params_list.append(robo_trader_params)
 
     self.log.info(f'Total Robo Trades to start...: {len(robo_trader_params_list)}')

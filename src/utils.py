@@ -72,6 +72,7 @@ def register_account_balance(profit_and_loss):
   session.add(new_ab)
   transaction.commit()
   session.close()
+  return balance
 
 
 def get_amount_to_invest(register=True):

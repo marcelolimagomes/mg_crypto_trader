@@ -20,6 +20,7 @@ class RoboTrader():
     self._symbol = params['symbol']
     self._interval = params['interval']
     self._estimator = params['estimator']
+    self._mutex = params['mutex']
 
     # List arguments
     self._start_date = params['start_date']
@@ -284,13 +285,19 @@ class RoboTrader():
           strategy, target_margin = self.predict_strategy()
 
           if self.validate_short_or_long(strategy):  # If true, BUY
-            amount_invested, balance = utils.get_amount_to_invest(register=True)
             purchased = True
             purchase_price = actual_price
             take_profit, stop_loss = self.calc_sl_pnl(strategy, purchase_price, target_margin)
+
+            # Lock Thread to register BUY
+            self._mutex.acquire()
+            amount_invested, balance = utils.get_amount_to_invest(register=True)
             ledger_params = utils.get_params_operation(latest_closed_candle_open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
                                                        purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance)
             utils.register_operation(ledger_params)
+            self._mutex.release()
+            # End Lock
+
             self.log_buy(latest_closed_candle_open_time_aux, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
             self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
                            f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
@@ -309,21 +316,29 @@ class RoboTrader():
               perform_sell = True
 
           profit_and_loss = amount_invested * margin_operation
-          self.log.debug(f'\nPerform SELL: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
-                         f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}'
-                         f'\nMargin Operation: {100*margin_operation:.2f}%\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%'
-                         f'\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
 
           if perform_sell:  # Register Sell
-            utils.register_account_balance(amount_invested + profit_and_loss)
+            self.log.debug(f'\nPerform SELL: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
+                           f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}'
+                           f'\nMargin Operation: {100*margin_operation:.2f}%\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%'
+                           f'\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
+
+            # Lock Thread to register SELL
+            self._mutex.acquire()
+            balance = utils.register_account_balance(amount_invested + profit_and_loss)
             ledger_params = utils.get_params_operation(latest_closed_candle_open_time, self._symbol, self._interval, 'SELL', target_margin, amount_invested, take_profit, stop_loss,
                                                        purchase_price, rsi, actual_price, profit_and_loss, margin_operation, strategy, balance)
             utils.register_operation(ledger_params)
+            self._mutex.release()
+            # End Lock
+
             self.log_selling(latest_closed_candle_open_time, strategy, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
                              take_profit, stop_loss, target_margin, rsi)
             # Reset variables
             purchased, purchase_price, amount_invested, take_profit, stop_loss, profit_and_loss, margin_operation, target_margin = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       except Exception as e:
+        if self._mutex.locked():
+          self._mutex.release()
         self.log.exception(e)
         sm.send_status_to_telegram('ERROR: ' + str(e))
         error = True
