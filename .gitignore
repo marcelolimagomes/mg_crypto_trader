@@ -183,9 +183,14 @@ telegram.key
 
 *.pkl
 
+
 *.dat
 data/*.dat
 data/**/*.dat
+
+./*.dat
+./data/*.dat
+./data/**/*.dat
 
 /*.dat
 /data/*.dat
