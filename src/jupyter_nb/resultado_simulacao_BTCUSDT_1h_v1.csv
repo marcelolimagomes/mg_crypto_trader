@@ -1,0 +1,256 @@
+symbol;interval;estimator;stop_loss;times_regression_profit_and_loss;features;final_value
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];131.80902327632364
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'rsi', 'ema_24p', 'ema_200p'];145.3427374596376
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi'];146.65677333221635
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_24p', 'ema_200p'];157.9510923995274
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];158.81278032199705
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];159.97150385006938
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_24p'];165.95359236398147
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];166.23601744255518
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi'];168.95474506683877
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];175.21324060495732
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];177.52028056484895
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];180.76100838625024
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];182.28248827840738
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];186.4973099078678
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];190.69492869605938
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];190.94804017435277
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_200p'];191.68722404811453
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];199.40345547762539
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];199.73202613163423
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];199.99254561400429
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi'];200.3593055711806
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];202.223158553347
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'rsi'];202.8800742969108
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume'];203.87776702011809
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];203.98027138235386
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'rsi', 'ema_200p'];206.18813311716215
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi'];206.52061324679718
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];208.96224688008593
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];213.33609183828588
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi'];213.99178753408663
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];216.69579062384435
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];217.47638562017744
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'rsi', 'ema_24p'];217.53199310924992
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'rsi', 'ema_24p'];218.71619995990397
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];218.86366187177663
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume'];219.06535128960954
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_200p'];219.42849041104307
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'ema_24p', 'ema_200p'];219.93493323790727
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];220.2198334081942
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_24p'];220.31620347883091
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];220.65903906658335
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];220.70588316432648
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_200p'];221.5650698867411
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];221.63759761611306
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];221.8225734507771
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];221.88241997237236
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p'];222.8680074593971
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];222.94214177817832
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume'];223.19725554714054
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];223.23774629249507
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];223.82455748486353
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];224.99047343672763
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_24p', 'ema_200p'];227.05512152922395
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];227.75582023614288
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];228.61332561700726
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi'];230.42556026307452
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];231.8507799504863
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'rsi'];232.63476188473797
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];232.65143560387017
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_24p'];233.60640185223863
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];234.08554209156998
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];236.27921737778047
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];238.61524239920587
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];239.1907953342174
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];239.27802715980988
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades'];239.4795914458977
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];240.20862061464177
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];241.36616775821938
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'ema_200p'];241.60511782605306
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];241.95234903454124
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_200p'];242.0469493154037
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];244.37109396563585
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];244.45643774166672
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];247.15734155815775
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'rsi'];247.31066416553418
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p'];248.7006385558116
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];248.7332399831748
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'rsi', 'ema_200p'];249.222968786751
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'rsi'];249.3165460714401
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_200p'];249.97780449914168
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];251.67752004059656
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];252.04015043885192
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];252.51295948550452
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];253.41229457207712
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'ema_200p'];254.1539932062608
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_200p'];254.35538237640029
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume'];254.43015445826276
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];255.22916674477622
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi'];255.9237347270663
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_200p'];257.5889710565534
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];257.8743460706054
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'rsi', 'ema_24p', 'ema_200p'];258.14404427611186
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];258.2619037610995
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p'];258.2835887187153
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];258.50762305389054
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];258.73233280977826
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];260.2239604878218
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades'];260.30248759591
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];261.07533798160324
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];261.1348046375525
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'ema_200p'];261.22314924761315
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume'];262.743416354993
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];262.845977175527
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume'];264.2554160807218
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];265.7796192743925
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];266.32318312832956
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];267.22391767272507
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];267.7577529744704
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];268.49999106679365
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'ema_24p'];269.21431476938375
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];269.79212843513073
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];270.96903213536336
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];271.37770973382067
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];273.59600700547264
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'rsi'];274.6298371184096
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];275.1213856369481
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];275.4372753124433
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume'];275.4546203300755
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'rsi'];277.62922415184556
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];278.36836679147024
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'rsi'];279.16863390253695
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];279.75905582282394
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'rsi'];281.77186640390505
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume'];283.0551484775333
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];283.1829856638906
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];283.5871476476067
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'ema_24p'];284.0226861239355
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'ema_24p', 'ema_200p'];285.26875889023006
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];285.8424162884991
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];286.0724243709868
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'ema_200p'];287.0922040113337
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume'];287.6990557717989
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];287.9016160952953
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'rsi', 'ema_200p'];288.32998637417506
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];289.10067345263366
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume'];289.14737242543043
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi'];291.2729429582324
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'rsi', 'ema_200p'];291.4173402794374
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];292.9651031989593
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];293.00781738095037
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'rsi', 'ema_24p'];293.0804322058183
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];293.21900707278775
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];293.5037674028905
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume'];294.3244723944727
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];294.9993895717116
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p'];295.51342433202313
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];295.51554032020476
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];296.37255145796286
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];297.1199014191682
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];297.309352217059
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'rsi', 'ema_200p'];297.5596952051626
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];297.902737224508
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'rsi', 'ema_24p', 'ema_200p'];300.3151618210593
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume'];301.09742627657766
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'ema_24p'];301.42100172670666
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];301.9531497456665
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p'];302.65638073803746
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];302.70952805128843
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume'];303.82452695296325
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'ema_24p'];304.4928289180433
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];306.77481770783635
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'ema_24p'];307.12254519758795
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume'];307.2044679743028
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'rsi', 'ema_24p'];308.9321198547791
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_200p'];309.33508659796877
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume'];310.58665029638274
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];311.0518720131115
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_200p'];311.72918309345414
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];312.3073423941124
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];314.5636178188589
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'ema_200p'];314.79742238898314
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];316.8721957777742
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];318.19783676638394
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'ema_24p'];318.5117771694555
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];318.92157655485613
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];322.0677110488996
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'rsi'];323.82422736802033
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];325.0472147096618
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];326.20890396843413
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];326.96409675619253
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_200p'];327.44342817182496
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];327.668840444955
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'ema_200p'];329.8364072274783
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume', 'ema_200p'];329.9177172377978
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_200p'];331.7967610945966
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'ema_200p'];334.3263914294017
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];334.7539074714734
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_24p'];335.32522979904127
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume'];335.7608848181516
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];338.3844768740062
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];338.42067204791135
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades'];340.2979415524453
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume'];340.3850105655502
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];341.7021071397512
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];343.5781547035145
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'ema_24p', 'ema_200p'];343.8743684340268
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];345.5905587099031
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_200p'];347.9136558995252
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];348.2316261722491
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'rsi', 'ema_24p', 'ema_200p'];349.3087807998332
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];351.30786249546253
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];351.72000803622655
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];351.93171725198147
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'ema_200p'];352.818926225158
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];353.67788892723405
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi'];356.2619539111881
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];357.34161591151104
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_24p'];359.15699223103036
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades'];359.37914587908887
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];360.74969361772423
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'ema_24p', 'ema_200p'];361.24888234208885
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_quote_asset_volume'];362.93121899738384
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'ema_200p'];364.71608332287707
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_24p'];365.60590746366535
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p'];366.06174792877573
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];367.20325361532133
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_200p'];367.7792000570802
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];368.3497206841687
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'ema_24p', 'ema_200p'];371.72456888973716
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];372.4227884377269
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'ema_24p', 'ema_200p'];372.871768128519
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_24p'];374.1862994848843
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'rsi'];378.04491595433745
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];379.951741619059
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];380.0724318786895
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];380.34388951039097
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'rsi', 'ema_24p'];381.62175203489596
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'rsi', 'ema_200p'];383.16276995352143
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'];384.0811991836234
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p'];386.9426575082081
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_200p'];387.0742761595725
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'taker_buy_base_asset_volume'];387.4718522521206
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];391.87863686567016
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi'];393.30142626123796
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'ema_24p'];398.4919343296372
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p'];399.9848150705205
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];400.70448169403096
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'taker_buy_base_asset_volume', 'rsi'];401.10067496029893
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'ema_24p'];402.500421800849
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'ema_24p', 'ema_200p'];403.4296881018721
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'ema_24p', 'ema_200p'];405.9404436049712
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'rsi'];407.5890561617438
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'ema_24p'];410.92491514539535
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'taker_buy_base_asset_volume', 'ema_200p'];415.28143673704835
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'ema_24p'];416.232826496506
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_quote_asset_volume', 'ema_24p', 'ema_200p'];416.74059779625435
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'rsi'];417.2956574677729
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];420.08513945354815
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_quote_asset_volume', 'ema_24p'];428.1784278216926
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'ema_200p'];433.08410187755595
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];454.19041405957404
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'rsi', 'ema_24p', 'ema_200p'];473.68855981103053
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'number_of_trades', 'ema_200p'];479.0886381502346
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'volume', 'number_of_trades', 'ema_24p'];544.9644959245838
+BTCUSDT;1h;knn;1.0;24;['open_time', 'status', 'quote_asset_volume', 'ema_24p', 'ema_200p'];584.0668449604868

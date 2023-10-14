@@ -205,7 +205,7 @@ class Train:
       end_test_date = df_final_predict['open_time'].max()
 
       self.log.info(f'{self.pl}: Min Data: {start_test_date}')
-      self.log.info(f'{self.pl}: Max Data: end_test_date')
+      self.log.info(f'{self.pl}: Max Data: {end_test_date}')
       saldo_inicial = 100.0
       saldo_final = utils.simule_trading_crypto2(df_final_predict, start_test_date, end_test_date, saldo_inicial, self._stop_loss)
 

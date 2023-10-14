@@ -13,6 +13,8 @@ all_klines_cols = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close
 all_cols = all_klines_cols + ['symbol']
 all_cols.remove('ignore')
 
+essential_cols = ['close']
+
 data_numeric_fields = ['open', 'high', 'low', 'volume', 'close']
 date_features = ['open_time']
 use_cols = date_features + data_numeric_fields

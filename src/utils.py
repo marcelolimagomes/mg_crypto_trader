@@ -202,15 +202,14 @@ def prepare_numeric_features_list(list_of_elements, fix_it='close'):
 
 
 def combine_list(list_of_elements):
-
   combinations_list = []
   for i in range(1, len(list_of_elements) + 1):
     a = combinations(list_of_elements, i)
     for s in a:
       res = ''
-    for j in s:
-      res += f'{j},'
-    combinations_list.append(res[0:len(res) - 1])
+      for j in s:
+        res += f'{j},'
+      combinations_list.append(res[0:len(res) - 1])
 
   return combinations_list
 
