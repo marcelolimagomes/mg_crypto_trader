@@ -195,3 +195,5 @@ data/**/*.dat
 /*.dat
 /data/*.dat
 /data/**/*.dat
+
+db/mg_trader.db
