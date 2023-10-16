@@ -23,14 +23,14 @@ interval = '1m'
 estimator = 'knn'
 _compare_models = False
 
-start_train_date = '2010-01-01'  # train < and test >=
+start_train_date = '2022-01-01'  # train < and test >=
 start_test_date = '2023-01-01'  # train < and test >=
 
 stop_loss = 1.0
 # regression_times = 0  # 24 * 30 * 2  # horas
-times_regression_PnL = 90
+times_regression_PnL = 120
 normalize = True
-use_gpu = False
+use_gpu = True
 tune_model = False
 apply_combination_features = False
 
@@ -56,7 +56,8 @@ apply_combination_features = False
 # %%
 cols = myenv.all_klines_cols.copy()
 cols.remove('ignore')
-data = utils.get_data(symbol=symbol, save_database=False, interval=interval, tail=-1, columns=cols, parse_dates=False)
+data = utils.get_data(symbol=symbol, save_database=False, interval=interval, tail=-1, columns=cols, parse_dates=True)
+data = data[data['open_time'] >= start_train_date]
 data = utils.parse_type_fields(data, parse_dates=True)
 data = utils.adjust_index(data)
 data.info()
@@ -103,7 +104,7 @@ test_data
 # BTCUSDT 1h best params: close,volume,quote_asset_volume,number_of_trades,rsi
 # numeric_features = 'volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume,rsi,ema_24p,ema_200p'.split(',')
 # text_numeric_features = 'close,volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume,rsi,ema_24p,ema_200p'
-text_numeric_features = 'number_of_trades,rsi,ema_120p,ema_200p'
+text_numeric_features = f'number_of_trades,rsi,ema_{int(times_regression_PnL)}p,ema_200p'
 numeric_features = text_numeric_features.split(',')
 print(f'Numeric Features: {numeric_features} - size: {len(numeric_features)}\n')
 

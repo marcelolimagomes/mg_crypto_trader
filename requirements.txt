@@ -3,3 +3,4 @@ pycaret[models]
 python-binance
 sqlalchemy
 sqlalchemy.orm
+httpx
