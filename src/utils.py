@@ -1,5 +1,6 @@
 import sys
 import os
+
 import pandas as pd
 import plotly.express as px
 import gc
@@ -805,25 +806,28 @@ def regression_PnL(data: pd.DataFrame, label: str, diff_percent: float, max_regr
   diff_col = 'd_'
   cols = []
   diff_cols = []
+  _data = pd.DataFrame()
   for i in range(1, max_regression_profit_and_loss + 1):
-    data[col + str(i)] = data['close'].shift(-i)
-    data[diff_col + str(i)] = 100 * ((data[col + str(i)] - data['close']) / data['close'])
+    _data[col + str(i)] = data['close'].shift(-i)
+    _data[diff_col + str(i)] = 100 * ((_data[col + str(i)] - data['close']) / data['close'])
     cols.append(col + str(i))
     diff_cols.append(diff_col + str(i))
 
   if strategy == 'SOBE_CAI':
-    data[label + '_sobe'] = data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE'])
-    data[label + '_cai'] = data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'CAI'])
-    data[label + '_sobe'] = pd.Categorical(data[label + '_sobe'])
-    data[label + '_sobe'] = pd.Categorical(data[label + '_sobe'])
+    _data[label + '_sobe'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE'])
+    _data[label + '_cai'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'CAI'])
+    _data[label + '_sobe'] = pd.Categorical(_data[label + '_sobe'])
+    _data[label + '_cai'] = pd.Categorical(_data[label + '_cai'])
   else:
-    data[label] = data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE_CAI'])
-    data[label] = pd.Categorical(data[label])
+    _data[label] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE_CAI'])
+    _data[label] = pd.Categorical(_data[label])
 
   if drop_na:
-    data.dropna(inplace=True)
+    _data.dropna(inplace=True)
   if drop_calc_cols:
-    data.drop(columns=cols + diff_cols, inplace=True)
+    _data.drop(columns=cols + diff_cols, inplace=True)
+
+  data = pd.concat([data, _data], axis=1)
 
   return data
 
