@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source .env/bin/activate
+conda activate mg
 
 # 1o - Update database
 python . -download-data -interval-list=1m,5m,15m,30m,1h -log-level=DEBUG -verbose
