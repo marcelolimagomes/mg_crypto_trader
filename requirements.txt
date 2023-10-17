@@ -1,3 +1,4 @@
+dpcpp_cpp_rt>=2023.2.*
 pycaret[full]
 pycaret[models]
 python-binance

@@ -1074,3 +1074,49 @@ def save_results(model_name,
   df_resultado_simulacao.sort_values('final_value', inplace=True)
 
   df_resultado_simulacao.to_csv(simulation_results_filename, sep=';', index=False)
+
+def has_results(symbol,
+                interval,
+                estimator,
+                imbalance_method,                 
+                start_train_date,
+                start_test_date,
+                numeric_features,
+                times_regression_profit_and_loss,
+                stop_loss):
+  
+  log.debug(f'symbol={symbol},interval={interval},estimator={estimator},imbalance_method={imbalance_method},start_train_date={start_train_date}\
+,start_test_date={start_test_date},numeric_features={numeric_features},times_regression_profit_and_loss={times_regression_profit_and_loss}\
+,stop_loss={stop_loss}')
+  
+  log.debug(f'symbol={type(symbol)},interval={type(interval)},estimator={type(estimator)},imbalance_method={type(imbalance_method)},start_train_date={type(start_train_date)}\
+,start_test_date={type(start_test_date)},numeric_features={type(numeric_features)},times_regression_profit_and_loss={type(times_regression_profit_and_loss)}\
+,stop_loss={type(stop_loss)}')
+
+
+  simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_{symbol}_{interval}.csv'
+  log.debug(f'simulation_results_filename: {simulation_results_filename}') 
+  if not os.path.exists(simulation_results_filename):
+    return False
+
+  df_resultado_simulacao = pd.read_csv(simulation_results_filename, sep=';')
+  #df_resultado_simulacao.info()
+  log.debug(f'df_resultado_simulacao.shape[0]: {df_resultado_simulacao.shape[0]}')
+  if df_resultado_simulacao.shape[0] > 0:
+    chave = (df_resultado_simulacao['symbol'] == symbol) & \
+        (df_resultado_simulacao['interval'] == interval) & \
+        (df_resultado_simulacao['estimator'] == estimator) & \
+        (df_resultado_simulacao['imbalance_method'] == imbalance_method) & \
+        (df_resultado_simulacao['stop_loss'] == float(stop_loss)) & \
+        (df_resultado_simulacao['times_regression_profit_and_loss'] == int(times_regression_profit_and_loss)) & \
+        (df_resultado_simulacao['start_train_date'] == start_train_date) & \
+        (df_resultado_simulacao['numeric_features'] == numeric_features)
+#        (df_resultado_simulacao['regression_times'] == regression_times) & \    
+#        (df_resultado_simulacao['start_test_date'] == start_test_date) & \
+
+    log.debug(f'chave.sum(): {chave.sum()}')
+    if chave.sum() > 0:
+      log.debug(f'fix_imbalance_method: {imbalance_method} already exists')
+      return True
+
+  return False

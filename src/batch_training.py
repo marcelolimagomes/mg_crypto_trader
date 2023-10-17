@@ -226,6 +226,18 @@ class BatchTrain:
     pd.DataFrame(_prm_list).to_csv(f'{myenv.datadir}/params_list{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv', index=False)
     results = []
     for params in params_list:
+      has_results = utils.has_results(params['symbol'], 
+                        params['interval'], 
+                        params['estimator'], 
+                        params['imbalance_method'], 
+                        params['start_train_date'], 
+                        params['start_test_date'], 
+                        params['numeric_features'], 
+                        params['times_regression_profit_and_loss'], 
+                        params['stop_loss'])
+      if has_results:
+        self.log.info(f'{self.pl}: Already has results!')
+        continue
       train = Train(params)
       res = train.run()
       results.append(res)
