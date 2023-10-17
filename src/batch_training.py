@@ -149,7 +149,8 @@ class BatchTrain:
     self.log.info(f'{self.pl}: {self.__class__.__name__}: Start Running...')
     params_list = []
     _prm_list = []
-    imbalance_list = 'smote,smoten,smoteenn,smotetomek,instancehardnessthreshold,repeatededitednearestneighbours,allknn'.split(',')
+    #imbalance_list = 'smote,smoten,smoteenn,smotetomek,instancehardnessthreshold,repeatededitednearestneighbours,allknn'.split(',')
+    imbalance_list = 'instancehardnessthreshold,repeatededitednearestneighbours,allknn'.split(',')
     for interval in self._interval_list:
       for symbol in self._symbol_list:
         for estimator in self._estimator_list:

@@ -1,4 +1,0 @@
-date;symbol;interval;estimator;fix_imbalance_method;stop_loss;times_regression_profit_and_loss;features;final_value;score
-2023-10-16 12:07:05;BTCUSDT;1m;knn;instancehardnessthreshold;1.0;120;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_120p', 'ema_200p'];94.16592666059654;[CAI_1.0=0.40][ESTAVEL=0.24][SOBE_1.0=0.49]
-2023-10-16 12:19:32;BTCUSDT;1m;knn;allknn;1.0;120;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_120p', 'ema_200p'];285.7126825639007;[CAI_1.0=0.20][ESTAVEL=0.50][SOBE_1.0=0.49]
-2023-10-16 12:13:32;BTCUSDT;1m;knn;repeatededitednearestneighbours;1.0;120;['open_time', 'status', 'number_of_trades', 'rsi', 'ema_120p', 'ema_200p'];3806.5249410502574;[CAI_1.0=0.09][ESTAVEL=0.46][SOBE_1.0=0.65]
