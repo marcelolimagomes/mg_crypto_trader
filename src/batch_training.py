@@ -118,6 +118,10 @@ class BatchTrain:
           for times_regression_PnL in self._times_regression_PnL_list:
             try:
               ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
+              self.log.info(f'{self.pl}: Calculating EMA\'s for key {ix_symbol}...')
+              self._all_data_list[ix_symbol].info() if self._verbose else None
+              self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(times_regression_PnL), 200])
+              self.log.info(f'{self.pl}:  info after calculating EMA\'s: ') if self._verbose else None
               self.log.info(f'{self.pl}: Calculating regression_profit_and_loss for key {ix_symbol}...')
               self._all_data_list[ix_symbol].info() if self._verbose else None
               self._all_data_list[ix_symbol] = utils.regression_PnL(
@@ -145,6 +149,7 @@ class BatchTrain:
     self.log.info(f'{self.pl}: {self.__class__.__name__}: Start Running...')
     params_list = []
     _prm_list = []
+    imbalance_list = 'smote,smoten,smoteenn,smotetomek,instancehardnessthreshold,repeatededitednearestneighbours,allknn'.split(',')
     for interval in self._interval_list:
       for symbol in self._symbol_list:
         for estimator in self._estimator_list:
@@ -153,21 +158,51 @@ class BatchTrain:
               for nf_list in self._numeric_features_list:  # Numeric Features
                 # nf_list += ',rsi' if self._calc_rsi else None
                 for rt_list in self._regression_times_list:
-                  ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
-                  if rt_list != '0':
-                    for rf_list in self._regression_features_list:
+                  for imbalance_method in imbalance_list:
+                    ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
+                    if rt_list != '0':
+                      for rf_list in self._regression_features_list:
+                        train_param = {
+                            'all_data': self._all_data_list[ix_symbol],
+                            'symbol': symbol,
+                            'interval': interval,
+                            'estimator': estimator,
+                            'imbalance_method': imbalance_method,
+                            'train_size': myenv.train_size,
+                            'start_train_date': self._start_train_date,
+                            'start_test_date': self._start_test_date,
+                            'numeric_features': nf_list,
+                            'stop_loss': stop_loss,
+                            'regression_times': rt_list,
+                            'regression_features': rf_list,
+                            'times_regression_profit_and_loss': times_regression_PnL,
+                            'calc_rsi': self._calc_rsi,
+                            'compare_models': False,
+                            'n_jobs': self._n_jobs,
+                            'use_gpu': self._use_gpu,
+                            'verbose': self._verbose,
+                            'normalize': self._normalize,
+                            'fold': self._fold,
+                            'use_all_data_to_train': self._use_all_data_to_train,
+                            'arguments': str(sys.argv[1:]),
+                            'no_tune': self._no_tune,
+                            'save_model': self._save_model}
+                        params_list.append(train_param)
+                        _prm_list.append(train_param.copy())
+                    else:
                       train_param = {
                           'all_data': self._all_data_list[ix_symbol],
                           'symbol': symbol,
                           'interval': interval,
                           'estimator': estimator,
+                          'imbalance_method': imbalance_method,
                           'train_size': myenv.train_size,
                           'start_train_date': self._start_train_date,
                           'start_test_date': self._start_test_date,
                           'numeric_features': nf_list,
                           'stop_loss': stop_loss,
                           'regression_times': rt_list,
-                          'regression_features': rf_list,
+                          'regression_features': None,
                           'times_regression_profit_and_loss': times_regression_PnL,
                           'calc_rsi': self._calc_rsi,
                           'compare_models': False,
@@ -182,33 +217,6 @@ class BatchTrain:
                           'save_model': self._save_model}
                       params_list.append(train_param)
                       _prm_list.append(train_param.copy())
-                  else:
-                    train_param = {
-                        'all_data': self._all_data_list[ix_symbol],
-                        'symbol': symbol,
-                        'interval': interval,
-                        'estimator': estimator,
-                        'train_size': myenv.train_size,
-                        'start_train_date': self._start_train_date,
-                        'start_test_date': self._start_test_date,
-                        'numeric_features': nf_list,
-                        'stop_loss': stop_loss,
-                        'regression_times': rt_list,
-                        'regression_features': None,
-                        'times_regression_profit_and_loss': times_regression_PnL,
-                        'calc_rsi': self._calc_rsi,
-                        'compare_models': False,
-                        'n_jobs': self._n_jobs,
-                        'use_gpu': self._use_gpu,
-                        'verbose': self._verbose,
-                        'normalize': self._normalize,
-                        'fold': self._fold,
-                        'use_all_data_to_train': self._use_all_data_to_train,
-                        'arguments': str(sys.argv[1:]),
-                        'no_tune': self._no_tune,
-                        'save_model': self._save_model}
-                    params_list.append(train_param)
-                    _prm_list.append(train_param.copy())
 
       self.log.info(f'{self.pl}: Total Trainning Models: {len(params_list)}')
 

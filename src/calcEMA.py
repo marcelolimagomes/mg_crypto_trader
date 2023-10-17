@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import gc
 import logging
+import sys
 valid_times = ['1mo', '2mo', '3mo', '6mo', '1y', '2y', '3y', '4y', '5y']
 
 log = logging.getLogger()
@@ -79,20 +80,25 @@ def calc_ema_days(df: pd.DataFrame, period_of_time: str, close_price='close') ->
 def calc_ema_periods(df: pd.DataFrame, periods_of_time: any, close_price='close', diff_price=True) -> pd.DataFrame:
   count_occours = df.shape[0]
  # log.info('Tamanho DF> ', count_occours)
+  try:
+    for periods in periods_of_time:
+      mme_price = "ema_" + str(periods) + 'p'
+      s_diff_price = mme_price + "_diff"
+      if periods > count_occours:
+        log.info(f'calc_ema_periods: Não foi encontrado registros no período informado: {periods}')
+        df[mme_price] = None
+        if diff_price:
+          df[s_diff_price] = None
+      else:
+        df[mme_price] = df[close_price].ewm(span=periods, min_periods=periods).mean()
+        df[mme_price] = df[mme_price].astype('float32')
+        if diff_price:
+          df[s_diff_price] = ((df[close_price] - df[mme_price]) / df[mme_price]) * 100
+          df[s_diff_price] = df[s_diff_price].astype('float32')
+  except Exception as error:
+    log.exception(error)
+    sys.exit(1)
 
-  for periods in periods_of_time:
-    mme_price = "ema_" + str(periods) + 'p'
-    s_diff_price = mme_price + "_diff"
-    if periods > count_occours:
-      log.info(f'calc_ema_periods: Não foi encontrado registros no período informado: {periods}')
-      df[mme_price] = None
-      if diff_price:
-        df[s_diff_price] = None
-    else:
-      df[mme_price] = df[close_price].ewm(
-          span=periods, min_periods=periods).mean()
-      if diff_price:
-        df[s_diff_price] = ((df[close_price] - df[mme_price]) / df[mme_price]) * 100
   return df
 
 
@@ -112,6 +118,7 @@ def calc_RSI(df: pd.DataFrame, close_price='close', window=14, fillna=False, las
 
         _df['rs'] = _df.avg_gain / _df.avg_loss
         _df['rsi'] = 100 - (100 / (1 + _df.rs))
+        _df['rsi'] = _df['rsi'].astype('float32')
         df.update(_df.iloc[_count - 1:_count]['rsi'])
       except Exception as error:
         log.error('calc_RSI: last_one=TRUE: Erro no calculo do RSI!')
@@ -129,6 +136,7 @@ def calc_RSI(df: pd.DataFrame, close_price='close', window=14, fillna=False, las
 
         if fillna:
           df['rsi'].fillna(0.0, inplace=True)
+        df['rsi'] = df['rsi'].astype('float32')
       except Exception as error:
         log.error('calc_RSI: last_one=FALSE: Erro no calculo do RSI!')
         log.exception(error)

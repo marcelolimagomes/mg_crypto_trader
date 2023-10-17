@@ -182,24 +182,20 @@ def get_symbol_list():
   return result
 
 
-def prepare_numeric_features_list(list_of_elements, fix_it='close'):
-  # Generate all possible combinations of length 2
-  if fix_it in list_of_elements:
-    list_of_elements.remove('close')
-
-  if len(list_of_elements) > 0:
-    combinations_list = ['close']
-    for i in range(1, len(list_of_elements) + 1):
-      a = combinations(list_of_elements, i)
-      for s in a:
+def prepare_numeric_features_list(list_of_numeric_features):
+  combination_numeric_features = []
+  if len(list_of_numeric_features) > 0:
+    for size in range(1, len(list_of_numeric_features) + 1):
+      comb = map(list, combinations(list_of_numeric_features, size))
+      for c in comb:
         res = ''
-        for j in s:
+        for j in c:
           res += f'{j},'
-        combinations_list.append(f'{fix_it},' + res[0:len(res) - 1])
-  else:
-    combinations_list = ['close']
+        combination_numeric_features.append(res[0:len(res) - 1])
 
-  return combinations_list
+  print(f'combination_numeric_features: {combination_numeric_features}')
+  print(f'combination_numeric_features SIZE: {len(combination_numeric_features)}')
+  return combination_numeric_features
 
 
 def combine_list(list_of_elements):
@@ -726,6 +722,12 @@ def parse_type_fields(df, parse_dates=False):
       if col in df.columns:
         if df[col].isna().sum() == 0:
           df[col] = df[col].astype('float32')
+    
+    for col in myenv.float_kline_cols:
+      if col in df.columns:
+        if df[col].isna().sum() == 0:
+          df[col] = df[col].astype('float32')
+
 
     for col in myenv.integer_kline_cols:
       if col in df.columns:
@@ -1018,6 +1020,7 @@ def save_results(model_name,
                  symbol,
                  interval,
                  estimator,
+                 imbalance_method,
                  train_size,
                  start_train_date,
                  start_test_date,
@@ -1045,6 +1048,7 @@ def save_results(model_name,
   result_simulado['symbol'] = symbol
   result_simulado['interval'] = interval
   result_simulado['estimator'] = estimator
+  result_simulado['imbalance_method'] = imbalance_method
   result_simulado['stop_loss'] = stop_loss
   result_simulado['regression_times'] = regression_times
   result_simulado['times_regression_profit_and_loss'] = times_regression_profit_and_loss

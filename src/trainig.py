@@ -15,6 +15,7 @@ class Train:
     self._train_size = float(params['train_size'])
     self._n_jobs = int(params['n_jobs'])
     self._fold = int(params['fold'])
+    self._imbalance_method = params['imbalance_method']
 
     self.log = logging.getLogger("training_logger")
     # List arguments
@@ -116,6 +117,7 @@ class Train:
     self._prepare_test_data()
 
   def _model_selection(self):
+    self._numeric_features = self._numeric_features.replace('ema_XXXp', f'ema_{self._times_regression_profit_and_loss}p')
     aux_numeric_features = self._numeric_features.split(',')
     aux_numeric_features += self._features_added
     aux_all_cols = []
@@ -125,6 +127,7 @@ class Train:
 
     self.log.info(f'{self.pl}: Setup model - aux_all_cols: {aux_all_cols}')
     self.log.info(f'{self.pl}: Setup model - numeric_features: {aux_numeric_features}')
+    self.log.info(f'{self.pl}: Setup model - imbalance_method: {self._imbalance_method}')
     self._experiement = ClassificationExperiment()
     self._setup = self._experiement.setup(
         data=self._train_data[aux_all_cols].copy(),
@@ -133,6 +136,11 @@ class Train:
         numeric_features=aux_numeric_features,
         date_features=['open_time'],
         create_date_columns=["hour", "day", "month"],
+        data_split_shuffle=False,
+        data_split_stratify=False,
+        fix_imbalance=True,
+        fix_imbalance_method=self._imbalance_method,
+        remove_outliers=True,
         fold_strategy='timeseries',
         fold=self._fold,
         session_id=123,
@@ -214,6 +222,7 @@ class Train:
         self._symbol,
         self._interval,
         self._estimator,
+        self._imbalance_method,
         self._train_size,
         self._start_train_date,
         start_test_date,

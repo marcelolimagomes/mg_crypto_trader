@@ -136,6 +136,7 @@ def main(args):
       aux = arg.split('=')[1]
       if ('-calc-rsi' in args) and ('rsi' not in aux):
         aux += ',rsi'
+      aux += ',ema_XXXp,ema_200p'
       numeric_features_list = prepare_numeric_features_list(aux.split(','))
 
     if (arg.startswith('-regression-PnL-list=')):
