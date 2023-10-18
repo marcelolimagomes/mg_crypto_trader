@@ -1,5 +1,7 @@
 import src.utils as utils
+import numpy as np
 from pycaret.classification import ClassificationExperiment
+from imblearn.under_sampling import InstanceHardnessThreshold, RepeatedEditedNearestNeighbours, AllKNN
 
 import src.myenv as myenv
 import logging
@@ -117,6 +119,8 @@ class Train:
     self._prepare_test_data()
 
   def _model_selection(self):
+    np.random.seed(31415) 
+
     self._numeric_features = self._numeric_features.replace('ema_XXXp', f'ema_{self._times_regression_profit_and_loss}p')
     aux_numeric_features = self._numeric_features.split(',')
     aux_numeric_features += self._features_added
@@ -129,6 +133,16 @@ class Train:
     self.log.info(f'{self.pl}: Setup model - numeric_features: {aux_numeric_features}')
     self.log.info(f'{self.pl}: Setup model - imbalance_method: {self._imbalance_method}')
     self._experiement = ClassificationExperiment()
+
+    imbalance_method = self._imbalance_method
+    match(self._imbalance_method):
+      case 'repeatededitednearestneighbours':
+        imbalance_method = RepeatedEditedNearestNeighbours(kind_sel='all', max_iter=100, n_jobs=20, n_neighbors=3, sampling_strategy='auto')
+      case 'instancehardnessthreshold':
+        imbalance_method = InstanceHardnessThreshold(cv=5, estimator=None, n_jobs=20, random_state=123, sampling_strategy='auto')
+      case 'allknn':
+        imbalance_method = AllKNN(allow_minority=False, kind_sel='all', n_jobs=20, n_neighbors=3, sampling_strategy='auto')
+
     self._setup = self._experiement.setup(
         data=self._train_data[aux_all_cols].copy(),
         train_size=self._train_size,
@@ -139,7 +153,7 @@ class Train:
         data_split_shuffle=False,
         data_split_stratify=False,
         fix_imbalance=True,
-        fix_imbalance_method=self._imbalance_method,
+        fix_imbalance_method=imbalance_method,
         remove_outliers=True,
         fold_strategy='timeseries',
         fold=self._fold,

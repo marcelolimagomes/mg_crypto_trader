@@ -20,6 +20,7 @@ class RoboTrader():
     self._symbol = params['symbol']
     self._interval = params['interval']
     self._estimator = params['estimator']
+    self._imbalance_method = params['imbalance_method']
     self._mutex = params['mutex']
 
     # List arguments
@@ -46,6 +47,9 @@ class RoboTrader():
 
     # Prepare columns to kline
     self._kline_features = myenv.date_features + self._numeric_features
+    if 'close' not in self._kline_features:
+      self._kline_features.append('close')
+      
     self._all_features = []
 
     # Initialize logging
@@ -55,7 +59,6 @@ class RoboTrader():
     sm.send_status_to_telegram(f'Starting Robo Trader for {self._symbol}_{self._interval}_{self._estimator} ')
 
   def _configure_log(self, log_level):
-
     log_file_path = os.path.join(myenv.logdir, f'robo_trader_{self._symbol}_{self._interval}_{self._estimator}.log')
     logger = logging.getLogger(f'robo_trader_{self._symbol}_{self._interval}_{self._estimator}')
     logger.propagate = False
@@ -136,6 +139,9 @@ class RoboTrader():
     return now_price, latest_closed_candle_open_time
 
   def feature_engineering_on_loop(self):
+    self.log.info(f'Calculating EMA\'s for key {self._symbol}_{self._interval}...')
+    self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[self._times_regression_profit_and_loss, 200])
+
     if self._calc_rsi:
       self.log.debug(f'Start Calculating RSI...')
       self._all_data = calc_utils.calc_RSI(self._all_data)

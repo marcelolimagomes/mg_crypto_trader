@@ -45,15 +45,16 @@ class TrainBestModel:
     for param in self._top_params:
       ix_symbol = f'{param["symbol"]}_{param["interval"]}'
       try:
-        # if self.calc_rsi:
+        self.log.info(f'Calculating EMA\'s for key {ix_symbol}...')
+        self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
+        self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
+        self._all_data_list[ix_symbol].info() if self._verbose else None
+
         self.log.info(f'Calc RSI for symbol: {ix_symbol}')
         self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
         self._all_data_list[ix_symbol].dropna(inplace=True)
-        self._all_data_list[ix_symbol].info() if self._verbose else None
-
         self.log.info('info after CalcRSI start_date: ') if self._verbose else None
         self._all_data_list[ix_symbol].info() if self._verbose else None
-
       except Exception as e:
         self.log.error(e)
 
@@ -66,19 +67,22 @@ class TrainBestModel:
     params_list = []
     for param in self._top_params:
       n_jobs = -1
-      if (param['arguments'].startswith('-n-jobs=')):
-        n_jobs = int(param['arguments'].split('=')[1])
-
       fold = 3
-      if (param['arguments'].startswith('-fold=')):
-        n_jobs = int(param['arguments'].split('=')[1])
+      _param = param['arguments'].replace('[', '').replace(']', '').replace('\'', '').replace(' ', '').split(',')
+      for p in _param:
+        if (p.startswith('-n-jobs=')):
+          n_jobs = int(p.split('=')[1])
+
+        if (p.startswith('-fold=')):
+          fold = int(p.split('=')[1])
 
       ix_symbol = f'{param["symbol"]}_{param["interval"]}'
       train_param = {
           'all_data': self._all_data_list[ix_symbol],
-          'symbol': f'{param["symbol"]}',
+          'symbol': param['symbol'],
           'interval': param['interval'],
           'estimator': param['estimator'],
+          'imbalance_method': param['imbalance_method'],
           'train_size': myenv.train_size,
           'start_train_date': '2010-01-01',
           'start_test_date': None,

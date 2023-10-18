@@ -74,6 +74,11 @@ class BatchRoboTrader:
     for param in self._top_params:
       ix_symbol = f'{param["symbol"]}_{param["interval"]}'
       try:
+        self.log.info(f'Calculating EMA\'s for key {ix_symbol}...')
+        self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
+        self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
+        self._all_data_list[ix_symbol].info() if self._verbose else None
+
         self.log.info(f'Calc RSI for symbol: {ix_symbol}')
         self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
         self._all_data_list[ix_symbol].dropna(inplace=True)
@@ -99,6 +104,7 @@ class BatchRoboTrader:
           'symbol': f'{robo_trader_params["symbol"]}',
           'interval': robo_trader_params['interval'],
           'estimator': robo_trader_params['estimator'],
+          'imbalance_method': robo_trader_params['imbalance_method'],
           'start_date': self._start_date,
           'numeric_features': robo_trader_params['numeric_features'],
           'stop_loss': robo_trader_params['stop_loss'],
@@ -157,7 +163,7 @@ class BatchRoboTrader:
             if f'{robo_trader_params["symbol"]}_{robo_trader_params["interval"]}' == thread_name:
               self.log.info(f'Starting new thread for symbol: {thread_name}')
               robo = RoboTrader(robo_trader_params)
-              new_thread = threading.Thread(target=robo.run, name=f'params["symbol"]_{robo_trader_params["interval"]}')
+              new_thread = threading.Thread(target=robo.run, name=f'{robo_trader_params["symbol"]}_{robo_trader_params["interval"]}')
               new_thread.start()
               thread_list.append(new_thread)
       # End Thread Validation

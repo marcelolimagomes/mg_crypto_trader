@@ -122,6 +122,8 @@ class BatchTrain:
               self._all_data_list[ix_symbol].info() if self._verbose else None
               self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(times_regression_PnL), 200])
               self.log.info(f'{self.pl}:  info after calculating EMA\'s: ') if self._verbose else None
+              self._all_data_list[ix_symbol].info() if self._verbose else None
+
               self.log.info(f'{self.pl}: Calculating regression_profit_and_loss for key {ix_symbol}...')
               self._all_data_list[ix_symbol].info() if self._verbose else None
               self._all_data_list[ix_symbol] = utils.regression_PnL(

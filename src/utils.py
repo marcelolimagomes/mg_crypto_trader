@@ -699,10 +699,15 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
   start_time = datetime.now()
   client = Client()
   klines = client.get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
-  if 'symbol' in columns:
-    columns.remove('symbol')
-  if 'rsi' in columns:
-    columns.remove('rsi')
+
+  cols_to_remove = ['symbol', 'rsi']
+  for col in columns:
+    if col.startswith('ema'):
+      cols_to_remove.append(col)
+  for col in cols_to_remove:
+    if col in columns:
+      columns.remove(col)
+
   # log.info('get_klines: columns: ', columns)
   df_klines = pd.DataFrame(data=klines, columns=myenv.all_klines_cols)[columns]
   df_klines = parse_type_fields(df_klines, parse_dates=parse_dates)
@@ -824,12 +829,12 @@ def regression_PnL(data: pd.DataFrame, label: str, diff_percent: float, max_regr
     _data[label] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE_CAI'])
     _data[label] = pd.Categorical(_data[label])
 
-  if drop_na:
-    _data.dropna(inplace=True)
   if drop_calc_cols:
     _data.drop(columns=cols + diff_cols, inplace=True)
 
   data = pd.concat([data, _data], axis=1)
+  if drop_na:
+    data.dropna(inplace=True)
 
   return data
 
