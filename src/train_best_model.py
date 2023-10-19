@@ -35,7 +35,7 @@ class TrainBestModel:
             tail=-1,
             columns=myenv.all_cols,
             parse_dates=True,
-            updata_data_from_web=True)
+            updata_data_from_web=False)
       except Exception as e:
         self.log.error(e)
     self.log.info(f'Loaded data to memory for symbols: {[s["symbol"] for s in self._top_params]}')
