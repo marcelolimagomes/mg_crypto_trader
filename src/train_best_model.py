@@ -84,7 +84,7 @@ class TrainBestModel:
           'estimator': param['estimator'],
           'imbalance_method': param['imbalance_method'],
           'train_size': myenv.train_size,
-          'start_train_date': '2010-01-01',
+          'start_train_date': param['start_train_date'],
           'start_test_date': None,
           'numeric_features': param['numeric_features'],
           'stop_loss': param['stop_loss'],
