@@ -9,6 +9,7 @@ import src.send_message as sm
 import logging
 import pandas as pd
 import datetime
+import numpy as np
 
 
 class BatchTrain:
@@ -90,6 +91,22 @@ class BatchTrain:
             parse_dates=True,
             updata_data_from_web=self._update_data_from_web,
             start_date=self._start_train_date)
+        
+        min_date = _aux_data['open_time'].min()
+        max_date = _aux_data['open_time'].max()
+        self.log.info(f'{self.pl}: Data Loaded: Min date: {min_date} - Max date: {max_date}')
+        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')
+        
+        self.log.info(f'{self.pl}: Filtering all data: days_to_validate_train_data: {myenv.days_to_validate_train} days')
+        min_index = _aux_data[_aux_data['open_time'] < validate_start_data].tail(myenv.rows_to_train).index.min()
+        real_rows_to_train = _aux_data[_aux_data['open_time'] < validate_start_data].tail(myenv.rows_to_train).shape[0]
+        real_rols_to_validate = _aux_data[_aux_data['open_time'] >= validate_start_data].shape[0]
+        _aux_data = _aux_data[_aux_data.index >= min_index]
+
+        min_date = _aux_data['open_time'].min()
+        max_date = _aux_data['open_time'].max()
+        self.log.info(f'{self.pl}: All Data Filtered: train_start_date: {min_date} - validate_start_data: {validate_start_data} - max_date: {max_date}')
+        self.log.info(f'{self.pl}: rows_to_train: {real_rows_to_train} - rows_to_validate: {real_rols_to_validate} - All Data Shape: {_aux_data.shape[0]}')
 
         try:
           self.log.info(f'{self.pl}: Calculating RSI for symbol: {symbol}_{interval}...')

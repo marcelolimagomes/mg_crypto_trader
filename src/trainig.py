@@ -5,6 +5,7 @@ from imblearn.under_sampling import InstanceHardnessThreshold, RepeatedEditedNea
 
 import src.myenv as myenv
 import logging
+import sys
 
 
 class Train:
@@ -54,12 +55,14 @@ class Train:
 
   # Helper functions
   def _prepare_train_data(self):
-    self.log.info(f'{self.pl}: Filtering train_data: start_train_date: {self._start_train_date} - start_test_date: {self._start_test_date}')
-
-    self.log.info(f'{self.pl}: Prepare Train Data...')
     try:
       if not self._use_all_data_to_train:
-        self._train_data = self._all_data[(self._all_data['open_time'] >= self._start_train_date) & (self._all_data['open_time'] < self._start_test_date)]
+        self.log.info(f'{self.pl}: Filtering train_data: start_train_date: {self._start_train_date} - start_test_date: {self._start_test_date}')
+        self.log.info(f'{self.pl}: Prepare Train Data...')
+        max_date = self._all_data['open_time'].max()
+        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
+        max_index = self._all_data[self._all_data['open_time'] < validate_start_data].index.max()
+        self._train_data = self._all_data[self._all_data.index <= max_index]
       else:
         self._train_data = self._all_data
 
@@ -73,19 +76,22 @@ class Train:
       self.log.error(e)
 
   def _prepare_test_data(self):
-    if not self._use_all_data_to_train:
-      self.log.info(f'{self.pl}: Filtering test_data: start_test_date: {self._start_test_date}')
-      self.log.info(f'{self.pl}: Prepare Test Data...')
-      try:
-        self._test_data = self._all_data[(self._all_data['open_time'] > self._start_test_date)]
+    try:
+      if not self._use_all_data_to_train:
+        self.log.info(f'{self.pl}: Filtering test_data: start_test_date: {self._start_test_date}')
+        self.log.info(f'{self.pl}: Prepare Test Data...')
+
+        max_date = self._all_data['open_time'].max()
+        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
+        max_index = self._all_data[self._all_data['open_time'] < validate_start_data].index.max()
+        self._test_data = self._all_data[(self._all_data.index > max_index)]
         self.log.info(f'{self.pl}: Info after filtering test_data: ') if self._verbose else None
         self._test_data.info() if self._verbose else None
 
         self.log.info(f'{self.pl}: Setup model - test_data.shape: {self._test_data.shape}')
         self.log.info(f'{self.pl}: Setup model - test_data: label stats: \n{self._test_data.groupby(myenv.label)[myenv.label].count()}')
-
-      except Exception as e:
-        self.log.error(e)
+    except Exception as e:
+      self.log.error(e)
 
   # ML Pipeline functions
   def _data_preprocessing(self):
@@ -222,12 +228,10 @@ class Train:
           self._test_data,
           ajusted_test_data)
 
-      self.log.info(f'{self.pl}: simule trading...')
       start_test_date = df_final_predict['open_time'].min()
       end_test_date = df_final_predict['open_time'].max()
+      self.log.info(f'{self.pl}: Simule trading: Min Data: {start_test_date} - Max Data: {end_test_date} - Shape: {df_final_predict.shape[0]}')
 
-      self.log.info(f'{self.pl}: Min Data: {start_test_date}')
-      self.log.info(f'{self.pl}: Max Data: {end_test_date}')
       saldo_inicial = 100.0
       saldo_final = utils.simule_trading_crypto2(df_final_predict, start_test_date, end_test_date, saldo_inicial, self._stop_loss)
 

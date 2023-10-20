@@ -38,6 +38,9 @@ saldo_inicial = 100
 stop_loss_multiplier = 2
 default_amount_invested = 100
 initial_amount_balance = 10000
+rows_to_train = 50000
+
+days_to_validate_train = 30 * 3 # Tree months
 
 sleep_refresh = 5  # seconds
 
