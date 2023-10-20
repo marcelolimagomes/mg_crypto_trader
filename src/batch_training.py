@@ -176,12 +176,12 @@ class BatchTrain:
           for stop_loss in self._stop_loss_list:
             for times_regression_PnL in self._times_regression_PnL_list:
               for nf_list in self._numeric_features_list:  # Numeric Features
-                # nf_list += ',rsi' if self._calc_rsi else None
+                nf_list = nf_list.replace('ema_XXXp', f'ema_{times_regression_PnL}p')
                 for rt_list in self._regression_times_list:
                   for imbalance_method in imbalance_list:
                     ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
                     if rt_list != '0':
-                      for rf_list in self._regression_features_list:
+                      for rf_list in self._regression_features_list:                        
                         train_param = {
                             'all_data': self._all_data_list[ix_symbol],
                             'symbol': symbol,
@@ -250,13 +250,11 @@ class BatchTrain:
                         params['interval'], 
                         params['estimator'], 
                         params['imbalance_method'], 
-                        params['start_train_date'], 
-                        params['start_test_date'], 
                         params['numeric_features'], 
                         params['times_regression_profit_and_loss'], 
                         params['stop_loss'])
       if has_results:
-        self.log.info(f'{self.pl}: Already has results!')
+        self.log.info(f"{self.pl}: Already has results for: {params['symbol']}_{params['interval']}_{params['estimator']}_{params['imbalance_method']}_{params['times_regression_profit_and_loss']}_stop_loss_{params['stop_loss']}_{params['numeric_features']}")
         continue
       train = Train(params)
       res = train.run()

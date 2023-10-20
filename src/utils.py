@@ -153,7 +153,7 @@ def prepare_best_params():
     if os.path.isfile(file_path):
       df = pd.read_csv(file_path, sep=';')
     df['count_numeric_features'] = df['numeric_features'].apply(lambda x: len(x.split(',')))
-    df.sort_values(['profit_and_loss_value', 'count_numeric_features'], ascending=[True, False], inplace=True)
+    df.sort_values(['final_score', 'count_numeric_features'], ascending=[True, False], inplace=True)
     df_top_params = pd.concat([df_top_params, df.tail(1)], ignore_index=True)
 
   top_paramers_filename = f'{myenv.datadir}/top_params.csv'
@@ -1036,8 +1036,8 @@ def save_results(model_name,
                  times_regression_profit_and_loss,
                  stop_loss,
                  fold,
-                 start_value,
-                 final_value,
+                 #start_value,
+                 #final_value,
                  use_all_data_to_train,
                  no_tune,
                  res_score,
@@ -1058,9 +1058,15 @@ def save_results(model_name,
   result_simulado['stop_loss'] = stop_loss
   result_simulado['regression_times'] = regression_times
   result_simulado['times_regression_profit_and_loss'] = times_regression_profit_and_loss
-  result_simulado['profit_and_loss_value'] = round(final_value - start_value, 2)
-  result_simulado['start_value'] = round(start_value, 2)
-  result_simulado['final_value'] = round(final_value, 2)
+  if res_score is not None:
+    for i in range(0, len(res_score.index.values)):
+      field = res_score.index.values[i].split('_')[0]
+      result_simulado[field] = round(res_score["_score"].values[i], 4)
+    result_simulado['max_score'] = max(result_simulado['CAI'], result_simulado['SOBE'])
+
+  #result_simulado['profit_and_loss_value'] = round(final_value - start_value, 2)
+  #result_simulado['start_value'] = round(start_value, 2)
+  #result_simulado['final_value'] = round(final_value, 2)
   result_simulado['numeric_features'] = numeric_features
   result_simulado['regression_features'] = regression_features
   result_simulado['train_size'] = train_size
@@ -1069,15 +1075,12 @@ def save_results(model_name,
   result_simulado['start_test_date'] = start_test_date
   result_simulado['fold'] = fold
   result_simulado['no-tune'] = no_tune
-  if res_score is not None:
-    result_simulado['score'] = ''
-    for i in range(0, len(res_score.index.values)):
-      result_simulado['score'] += f'[{res_score.index.values[i]}={res_score["_score"].values[i]:.2f}]'
+
   result_simulado['model_name'] = model_name
   result_simulado['arguments'] = arguments
 
   df_resultado_simulacao = pd.concat([df_resultado_simulacao, pd.DataFrame([result_simulado])], ignore_index=True)
-  df_resultado_simulacao.sort_values('final_value', inplace=True)
+  df_resultado_simulacao.sort_values('max_score', inplace=True)
 
   df_resultado_simulacao.to_csv(simulation_results_filename, sep=';', index=False)
 
@@ -1085,19 +1088,15 @@ def has_results(symbol,
                 interval,
                 estimator,
                 imbalance_method,                 
-                start_train_date,
-                start_test_date,
                 numeric_features,
                 times_regression_profit_and_loss,
                 stop_loss):
   
-  log.debug(f'symbol={symbol},interval={interval},estimator={estimator},imbalance_method={imbalance_method},start_train_date={start_train_date}\
-,start_test_date={start_test_date},numeric_features={numeric_features},times_regression_profit_and_loss={times_regression_profit_and_loss}\
-,stop_loss={stop_loss}')
+  log.debug(f'symbol={symbol},interval={interval},estimator={estimator},imbalance_method={imbalance_method},numeric_features={numeric_features}\
+,times_regression_profit_and_loss={times_regression_profit_and_loss},stop_loss={stop_loss}')
   
-  log.debug(f'symbol={type(symbol)},interval={type(interval)},estimator={type(estimator)},imbalance_method={type(imbalance_method)},start_train_date={type(start_train_date)}\
-,start_test_date={type(start_test_date)},numeric_features={type(numeric_features)},times_regression_profit_and_loss={type(times_regression_profit_and_loss)}\
-,stop_loss={type(stop_loss)}')
+  log.debug(f'symbol={type(symbol)},interval={type(interval)},estimator={type(estimator)},imbalance_method={type(imbalance_method)}\
+,numeric_features={type(numeric_features)},times_regression_profit_and_loss={type(times_regression_profit_and_loss)},stop_loss={type(stop_loss)}')
 
 
   simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_{symbol}_{interval}.csv'
@@ -1115,14 +1114,13 @@ def has_results(symbol,
         (df_resultado_simulacao['imbalance_method'] == imbalance_method) & \
         (df_resultado_simulacao['stop_loss'] == float(stop_loss)) & \
         (df_resultado_simulacao['times_regression_profit_and_loss'] == int(times_regression_profit_and_loss)) & \
-        (df_resultado_simulacao['start_train_date'] == start_train_date) & \
         (df_resultado_simulacao['numeric_features'] == numeric_features)
 #        (df_resultado_simulacao['regression_times'] == regression_times) & \    
 #        (df_resultado_simulacao['start_test_date'] == start_test_date) & \
 
     log.debug(f'chave.sum(): {chave.sum()}')
     if chave.sum() > 0:
-      log.debug(f'fix_imbalance_method: {imbalance_method} already exists')
+      log.debug(f'{symbol}_{interval}_{estimator}: fix_imbalance_method: {imbalance_method} already exists')
       return True
 
   return False

@@ -127,7 +127,6 @@ class Train:
   def _model_selection(self):
     np.random.seed(31415) 
 
-    self._numeric_features = self._numeric_features.replace('ema_XXXp', f'ema_{self._times_regression_profit_and_loss}p')
     aux_numeric_features = self._numeric_features.split(',')
     aux_numeric_features += self._features_added
     aux_all_cols = []
@@ -216,8 +215,8 @@ class Train:
     res_score = None
     start_test_date = None
     end_test_date = None
-    saldo_inicial = 0.0
-    saldo_final = 0.0
+    #saldo_inicial = 0.0
+    #saldo_final = 0.0
 
     if not self._use_all_data_to_train:
       ajusted_test_data = self._test_data.drop(myenv.label, axis=1)
@@ -232,8 +231,8 @@ class Train:
       end_test_date = df_final_predict['open_time'].max()
       self.log.info(f'{self.pl}: Simule trading: Min Data: {start_test_date} - Max Data: {end_test_date} - Shape: {df_final_predict.shape[0]}')
 
-      saldo_inicial = 100.0
-      saldo_final = utils.simule_trading_crypto2(df_final_predict, start_test_date, end_test_date, saldo_inicial, self._stop_loss)
+      #saldo_inicial = 100.0
+      #saldo_final = utils.simule_trading_crypto2(df_final_predict, start_test_date, end_test_date, saldo_inicial, self._stop_loss)
 
     utils.save_results(
         model_name,
@@ -250,8 +249,8 @@ class Train:
         self._times_regression_profit_and_loss,
         self._stop_loss,
         self._fold,
-        saldo_inicial,
-        saldo_final,
+        #saldo_inicial,
+        #saldo_final,
         self._use_all_data_to_train,
         self._no_tune,
         res_score,
