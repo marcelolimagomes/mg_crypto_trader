@@ -12,6 +12,7 @@ class Train:
   def __init__(self, params: dict):
     # Single arguments
     self._all_data = params['all_data'].copy()
+    self._strategy = params['strategy']
     self._symbol = params['symbol']
     self._interval = params['interval']
     self._estimator = params['estimator']
@@ -54,42 +55,20 @@ class Train:
     self.pl = f'Train: {self._symbol}-{self._interval}-{self._estimator}'
 
   # Helper functions
-  def _prepare_train_data(self):
+  def _prepare_train_test_data(self):
     try:
       if not self._use_all_data_to_train:
         self.log.info(f'{self.pl}: Filtering train_data: start_train_date: {self._start_train_date} - start_test_date: {self._start_test_date}')
         self.log.info(f'{self.pl}: Prepare Train Data...')
-        max_date = self._all_data['open_time'].max()
-        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
-        max_index = self._all_data[self._all_data['open_time'] < validate_start_data].index.max()
-        self._train_data = self._all_data[self._all_data.index <= max_index]
+        self._train_data, self._test_data = utils.split_train_test_data(self._all_data)
+
+        self.log.info(f'{self.pl}: info after filtering train_data: ') if self._verbose else None
+        self._train_data.info() if self._verbose else None
+        self.log.info(f'{self.pl}: info after filtering test_data: ') if self._verbose else None
+        self._test_data.info() if self._verbose else None
       else:
         self._train_data = self._all_data
 
-      self.log.info(f'{self.pl}: info after filtering train_data: ') if self._verbose else None
-      self._train_data.info() if self._verbose else None
-
-      self.log.info(f'{self.pl}: Setup model - train_data.shape: {self._train_data.shape}')
-      self.log.info(f'{self.pl}: Setup model - train_data: label stats: \n{self._train_data.groupby(myenv.label)[myenv.label].count()}')
-
-    except Exception as e:
-      self.log.error(e)
-
-  def _prepare_test_data(self):
-    try:
-      if not self._use_all_data_to_train:
-        self.log.info(f'{self.pl}: Filtering test_data: start_test_date: {self._start_test_date}')
-        self.log.info(f'{self.pl}: Prepare Test Data...')
-
-        max_date = self._all_data['open_time'].max()
-        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
-        max_index = self._all_data[self._all_data['open_time'] < validate_start_data].index.max()
-        self._test_data = self._all_data[(self._all_data.index > max_index)]
-        self.log.info(f'{self.pl}: Info after filtering test_data: ') if self._verbose else None
-        self._test_data.info() if self._verbose else None
-
-        self.log.info(f'{self.pl}: Setup model - test_data.shape: {self._test_data.shape}')
-        self.log.info(f'{self.pl}: Setup model - test_data: label stats: \n{self._test_data.groupby(myenv.label)[myenv.label].count()}')
     except Exception as e:
       self.log.error(e)
 
@@ -121,8 +100,7 @@ class Train:
       self.log.info(f'{self.pl}: info after calculating regression_profit_and_loss: ')
       self._all_data.info() if self._verbose else None
 
-    self._prepare_train_data()
-    self._prepare_test_data()
+    self._prepare_train_test_data()
 
   def _model_selection(self):
     np.random.seed(31415) 
@@ -195,22 +173,27 @@ class Train:
   def _finalize_training(self):
     model_name = '<< NOT SAVED >>'
     if self._save_model:
-      utils.save_model(
-          self._symbol,
-          self._interval,
-          self._final_model,
-          self._experiement,
-          self._estimator,
-          self._stop_loss,
-          self._regression_times,
-          self._times_regression_profit_and_loss)
-      model_name = utils.get_model_name_to_load(
-          self._symbol,
-          self._interval,
-          self._estimator,
-          self._stop_loss,
-          self._regression_times,
-          self._times_regression_profit_and_loss)
+      if self._strategy is None:
+        raise Exception('Strategy is required to save model')
+      else:
+        utils.save_model(
+            self._strategy,
+            self._symbol,
+            self._interval,
+            self._final_model,
+            self._experiement,
+            self._estimator,
+            self._stop_loss,
+            self._regression_times,
+            self._times_regression_profit_and_loss)
+        model_name = utils.get_model_name_to_load(
+            self._strategy,
+            self._symbol,
+            self._interval,
+            self._estimator,
+            self._stop_loss,
+            self._regression_times,
+            self._times_regression_profit_and_loss)
 
     res_score = None
     start_test_date = None

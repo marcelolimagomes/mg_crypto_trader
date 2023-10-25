@@ -15,62 +15,73 @@ import logging
 
 class RoboTrader():
   def __init__(self, params: dict):
+    # print('ROBO TRADER >>>>>>> ', params)
+    self._params = params
+    self._all_data = {'CAI': params['CAI']['all_data'].copy(), 'SOBE': params['SOBE']['all_data'].copy()}
+
     # Single arguments
-    self._all_data = params['all_data'].copy()
     self._symbol = params['symbol']
     self._interval = params['interval']
-    self._estimator = params['estimator']
-    self._imbalance_method = params['imbalance_method']
     self._mutex = params['mutex']
 
+    self._estimator = utils.get_params_robo_trader(params, 'estimator')  # params['estimator']
+    self._imbalance_method = utils.get_params_robo_trader(params, 'imbalance_method') # params['imbalance_method']
+
     # List arguments
-    self._start_date = params['start_date']
-    self._numeric_features = params['numeric_features'].split(',')
-    self._stop_loss = float(params['stop_loss'])
-    self._regression_times = int(params['regression_times'])
-    if self._regression_times > 0:
-      self._regression_features = params['regression_features'].split(',')
+    self._start_date = utils.get_params_robo_trader(params, 'start_date')
+    self._numeric_features = utils.get_params_robo_trader(params, 'numeric_features', split=True)
+
+    self._stop_loss = utils.get_params_robo_trader(params, 'stop_loss', 'float')
+    self._regression_times = utils.get_params_robo_trader(params, 'regression_times', 'int')
+
+    if (self._regression_times['CAI'] > 0) or (self._regression_times['SOBE'] > 0):
+      self._regression_features = utils.get_params_robo_trader(params, 'regression_features', split=True)
     else:
       self._regression_features = []
-    self._times_regression_profit_and_loss = int(params['times_regression_profit_and_loss'])
+
+    self._times_regression_profit_and_loss = utils.get_params_robo_trader(params, 'times_regression_profit_and_loss', 'int')
     # Boolean arguments
-    self._calc_rsi = params['calc_rsi']
-    self._verbose = params['verbose']
-    self._arguments = params['arguments']
+    self._calc_rsi = utils.get_params_robo_trader(params, 'calc_rsi')
+    self._arguments = utils.get_params_robo_trader(params, 'arguments')
+
+    self._verbose = params['CAI']['verbose']
 
     # Internal atributes
-    self._features_added = []
-    self._experiement = None
-    self._setup = None
-    self._model = None
-    self._model_name_init = ''
+    self._features_added = {'CAI': [], 'SOBE': []}
+    self._experiment = {'CAI': None, 'SOBE': None}
+    self._setup = {'CAI': None, 'SOBE': None}
+    self._model = {'CAI': None, 'SOBE': None}
+    self._model_name_init = {'CAI': '', 'SOBE': ''}
 
     # Prepare columns to kline
-    self._kline_features = myenv.date_features + self._numeric_features
-    if 'close' not in self._kline_features:
-      self._kline_features.append('close')
+    self._kline_features = {'CAI': myenv.date_features + self._numeric_features['CAI'], 'SOBE': myenv.date_features + self._numeric_features['SOBE']}
+    if 'close' not in self._kline_features['CAI']:
+      self._kline_features['CAI'].append('close')
       
-    self._all_features = []
+    if 'close' not in self._kline_features['SOBE']:
+      self._kline_features['SOBE'].append('close')
+
+    self._all_features = {'CAI': [], 'SOBE': []}
 
     # Initialize logging
-    self.log = self._configure_log(params['log_level'])
+    self.log = self._configure_log(params['CAI']['log_level'])
 
     self.ix_symbol = f'{self._symbol}_{self._interval}'
-    sm.send_status_to_telegram(f'Starting Robo Trader for {self._symbol}_{self._interval}_{self._estimator} ')
+    sm.send_status_to_telegram(f'Starting Robo Trader for {self._symbol}_{self._interval}')
 
   def _configure_log(self, log_level):
-    log_file_path = os.path.join(myenv.logdir, f'robo_trader_{self._symbol}_{self._interval}_{self._estimator}.log')
-    logger = logging.getLogger(f'robo_trader_{self._symbol}_{self._interval}_{self._estimator}')
+    log_file_path = os.path.join(myenv.logdir, f'robo_trader_{self._symbol}_{self._interval}.log')
+    logger = logging.getLogger(f'robo_trader_{self._symbol}_{self._interval}')
     logger.propagate = False
 
     logger.setLevel(log_level)
 
     fh = logging.FileHandler(log_file_path, mode='a', delay=True)
-    fh.setFormatter(logging.Formatter(f'[%(asctime)s] - %(levelname)s - RoboTrader: {self._symbol}-{self._interval}-{self._estimator} - %(message)s', '%Y-%m-%d %H:%M:%S'))
+    fh.setFormatter(logging.Formatter(f'[%(asctime)s] - %(levelname)s - RoboTrader: {self._symbol}-{self._interval} - %(message)s', '%Y-%m-%d %H:%M:%S'))
     fh.setLevel(log_level)
 
     sh = logging.StreamHandler()
-    sh.setFormatter(logging.Formatter(f'[%(asctime)s] - %(levelname)s - RoboTrader: {self._symbol}-{self._interval}-{self._estimator} - %(message)s', '%Y-%m-%d %H:%M:%S'))
+    sh.setFormatter(logging.Formatter(f'[%(asctime)s] - %(levelname)s - RoboTrader: {self._symbol}-{self._interval} - %(message)s', '%Y-%m-%d %H:%M:%S'))
     sh.setLevel(log_level)
 
     logger.addHandler(fh)
@@ -81,56 +92,105 @@ class RoboTrader():
     return
 
   def _feature_engineering(self):
-    self._all_features += self._kline_features
-    self._all_features += ['rsi'] if self._calc_rsi and 'rsi' not in self._all_features else []
+    self._all_features['CAI'] += self._kline_features['CAI']
+    self._all_features['SOBE'] += self._kline_features['SOBE']
 
-    if int(self._regression_times) > 0:
-      self.log.info(f'calculating regresstion_times: {self._regression_times} - regression_features: {self._regression_features}')
-      self._all_data, self._features_added = utils.regresstion_times(
-          self._all_data,
-          self._regression_features,
-          self._regression_times,
+    self._all_features['CAI'] += ['rsi'] if self._calc_rsi['CAI'] and 'rsi' not in self._all_features['CAI'] else []
+    self._all_features['SOBE'] += ['rsi'] if self._calc_rsi['SOBE'] and 'rsi' not in self._all_features['SOBE'] else []
+
+    if self._regression_times['CAI'] > 0:
+      self.log.info(f'calculating regresstion_times: {self._regression_times["CAI"]} - regression_features: {self._regression_features["CAI"]}')
+      self._all_data['CAI'], self._features_added['CAI'] = utils.regresstion_times(
+          self._all_data['CAI'],
+          self._regression_features['CAI'],
+          self._regression_times['CAI'],
           last_one=False)
-      self.log.info(f'Info after calculating regresstion_times: ') if self._verbose else None
-      self._all_data.info() if self._verbose else None
+      self.log.info(f'Info after calculating regresstion_times["CAI"]: ') if self._verbose else None
+      self._all_data['CAI'].info() if self._verbose else None
+      self._all_features['CAI'] += self._features_added['CAI']
 
-      self._all_features += self._features_added
+    if self._regression_times['SOBE'] > 0:
+      self.log.info(f'calculating regresstion_times: {self._regression_times["SOBE"]} - regression_features: {self._regression_features["SOBE"]}')
+      self._all_data['SOBE'], self._features_added['SOBE'] = utils.regresstion_times(
+          self._all_data['SOBE'],
+          self._regression_features['SOBE'],
+          self._regression_times['SOBE'],
+          last_one=False)
+      self.log.info(f'Info after calculating regresstion_times["SOBE"]: ') if self._verbose else None
+      self._all_data['SOBE'].info() if self._verbose else None
+      self._all_features['SOBE'] += self._features_added['SOBE']
 
-    self.log.info(f'All Features: {self._all_features}')
+    self.log.info(f'All Features CAI: {self._all_features["CAI"]}')
+    self.log.info(f'All Features SOBE: {self._all_features["SOBE"]}')
     self.log.debug('Reshape to All Features')
-    self._all_data = self._all_data[self._kline_features]
-    self._all_data.info()
+    self._all_data['CAI'] = self._all_data['CAI'][self._kline_features['CAI']]
+    self._all_data['SOBE'] = self._all_data['SOBE'][self._kline_features['SOBE']]
+    self._all_data['CAI'].info()
+    self._all_data['SOBE'].info()
+
 
   def _load_model(self):
-    self._model_name_init = utils.get_model_name_to_load(
+    self._model_name_init['CAI'] = utils.get_model_name_to_load(
+        'CAI',
         self._symbol,
         self._interval,
-        self._estimator,
-        self._stop_loss,
-        self._regression_times,
-        self._times_regression_profit_and_loss)
+        self._estimator['CAI'],
+        self._stop_loss['CAI'],
+        self._regression_times['CAI'],
+        self._times_regression_profit_and_loss['CAI'])
 
-    self._experiment, self._model = utils.load_model(
+    self._model_name_init['SOBE'] = utils.get_model_name_to_load(
+        'SOBE',
         self._symbol,
         self._interval,
-        self._estimator,
-        self._stop_loss,
-        self._regression_times,
-        self._times_regression_profit_and_loss)
+        self._estimator['SOBE'],
+        self._stop_loss['SOBE'],
+        self._regression_times['SOBE'],
+        self._times_regression_profit_and_loss['SOBE'])
 
-    self.log.info(f'model {self._model_name_init} loaded.')
+    self._experiment['CAI'], self._model['CAI'] = utils.load_model(
+        'CAI',
+        self._symbol,
+        self._interval,
+        self._estimator['CAI'],
+        self._stop_loss['CAI'],
+        self._regression_times['CAI'],
+        self._times_regression_profit_and_loss['CAI'])
+    
+    self._experiment['SOBE'], self._model['SOBE'] = utils.load_model(
+        'SOBE',
+        self._symbol,
+        self._interval,
+        self._estimator['SOBE'],
+        self._stop_loss['SOBE'],
+        self._regression_times['SOBE'],
+        self._times_regression_profit_and_loss['SOBE'])
+
+    self.log.info(f'model {self._model_name_init["CAI"]} loaded.')
+    self.log.info(f'model {self._model_name_init["SOBE"]} loaded.')
 
   def update_data_from_web(self):
-    self.log.debug(f'Getting data from web. all_data shape: {self._all_data.shape}')
-    df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=self._kline_features, parse_dates=True)
+    self.log.debug(f'Getting data from web. all_data shape CAI: {self._all_data["CAI"].shape}')
+    self.log.debug(f'Getting data from web. all_data shape SOBE: {self._all_data["SOBE"].shape}')
+    #self._kline_features
+    df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=myenv.all_klines_cols, parse_dates=True)
     # df_klines['symbol'] = self._symbol
     self.log.debug(f'df_klines shape: {df_klines.shape}')
     df_klines.info() if self._verbose else None
 
-    self._all_data = pd.concat([self._all_data, df_klines])
-    self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
-    self._all_data.sort_index(inplace=True)
-    self.log.debug(f'Updated - all_data.shape: {self._all_data.shape}')
+    klines_features = utils.remove_cols_for_klines(self._kline_features['CAI'])
+    self.log.debug(f'klines_features CAI: {klines_features}')
+    self._all_data['CAI'] = pd.concat([self._all_data['CAI'], df_klines[klines_features]])
+    self._all_data['CAI'].drop_duplicates(keep='last', subset=['open_time'], inplace=True)
+    self._all_data['CAI'].sort_index(inplace=True)
+    self.log.debug(f'Updated - all_data.shape CAI: {self._all_data["CAI"].shape}')
+
+    klines_features = utils.remove_cols_for_klines(self._kline_features['SOBE'])
+    self.log.debug(f'klines_features SOBE: {klines_features}')
+    self._all_data['SOBE'] = pd.concat([self._all_data['SOBE'], df_klines[klines_features]])
+    self._all_data['SOBE'].drop_duplicates(keep='last', subset=['open_time'], inplace=True)
+    self._all_data['SOBE'].sort_index(inplace=True)
+    self.log.debug(f'Updated - all_data.shape SOBE: {self._all_data["SOBE"].shape}')
 
     now_price = df_klines.tail(1)['close'].values[0]
     self.log.info(f'{self._symbol} Price: {now_price:.6f}')
@@ -140,17 +200,29 @@ class RoboTrader():
 
   def feature_engineering_on_loop(self):
     self.log.info(f'Calculating EMA\'s for key {self._symbol}_{self._interval}...')
-    self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[self._times_regression_profit_and_loss, 200])
+    self._all_data['CAI'] = calc_utils.calc_ema_periods(self._all_data['CAI'], periods_of_time=[self._times_regression_profit_and_loss['CAI'], 200])
+    self._all_data['SOBE'] = calc_utils.calc_ema_periods(self._all_data['SOBE'], periods_of_time=[self._times_regression_profit_and_loss['SOBE'], 200])
 
-    if self._calc_rsi:
-      self.log.debug(f'Start Calculating RSI...')
-      self._all_data = calc_utils.calc_RSI(self._all_data)
-      rsi = self._all_data.tail(1)['rsi'].values[0]
-      self.log.debug(f'After Calculating RSI. all_data.shape: {self._all_data.shape}')
+    rsi = {}
+    if self._calc_rsi['CAI']:
+      self.log.debug(f'Start Calculating RSI CAI ...')
+      self._all_data['CAI'] = calc_utils.calc_RSI(self._all_data['CAI'])
+      rsi['CAI'] = self._all_data['CAI'].tail(1)['rsi'].values[0]
+      self.log.debug(f'After Calculating RSI. all_data.shape CAI: {self._all_data["CAI"].shape}')
 
-    self.log.debug(f'regression_times {self._regression_times}...')
-    if (self._regression_times is not None) and (self._regression_times > 0):
-      self._all_data, _ = utils.regresstion_times(self._all_data, self._numeric_features, self._regression_times, last_one=True)
+    if self._calc_rsi['SOBE']:
+      self.log.debug(f'Start Calculating RSI SOBE...')
+      self._all_data['SOBE'] = calc_utils.calc_RSI(self._all_data['SOBE'])
+      rsi['SOBE'] = self._all_data['SOBE'].tail(1)['rsi'].values[0]
+      self.log.debug(f'After Calculating RSI. all_data.shape SOBE: {self._all_data["SOBE"].shape}')
+
+    self.log.debug(f'regression_times CAI: {self._regression_times["CAI"]}')
+    if (self._regression_times['CAI'] is not None) and (self._regression_times['CAI'] > 0):
+      self._all_data['CAI'], _ = utils.regresstion_times(self._all_data['CAI'], self._numeric_features['CAI'], self._regression_times['CAI'], last_one=True)
+
+    self.log.debug(f'regression_times SOBE: {self._regression_times["SOBE"]}')
+    if (self._regression_times['SOBE'] is not None) and (self._regression_times['SOBE'] > 0):
+      self._all_data['SOBE'], _ = utils.regresstion_times(self._all_data['SOBE'], self._numeric_features['SOBE'], self._regression_times['SOBE'], last_one=True)
 
     return rsi
 
@@ -217,26 +289,28 @@ class RoboTrader():
     self.log.info(f'{msg}')
     sm.send_to_telegram(msg)
 
-  def predict_strategy(self):
-    strategy, target_margin = '', 0.0
-    self.log.info(f'Start Predicting Strategy.')
+  def predict_strategy(self, strategy: str):
+    result_strategy, target_margin = 'ESTAVEL', 0.0
+    self.log.info(f'Start Predicting Strategy for: {strategy}')
+    if self._experiment[strategy] is None:
+      return result_strategy, target_margin
 
-    df_to_predict = self._all_data.tail(1)
-    self.log.debug(f'Data input to Predict:\n{df_to_predict.to_dict(orient="records")}')
+    df_to_predict = self._all_data[strategy].tail(1)
+    self.log.debug(f'Data input to Predict for: {strategy}:\n{df_to_predict.to_dict(orient="records")}')
 
-    df_predict = self._experiment.predict_model(self._model, df_to_predict, verbose=self._verbose)
+    df_predict = self._experiment[strategy].predict_model(self._model[strategy], df_to_predict, verbose=self._verbose)
 
     prediction_label = df_predict['prediction_label'].values[0]
-    self.log.info(f'Strategy Predicted: {prediction_label}')
+    self.log.info(f'Strategy Predicted for: {strategy}: {prediction_label}')
 
     if self.validate_short_or_long(prediction_label):
-      strategy = prediction_label.split('_')[0]
+      result_strategy = prediction_label.split('_')[0]
       target_margin = float(prediction_label.split('_')[1])
 
-    return strategy, target_margin
+    return result_strategy, target_margin
 
   def run(self):
-    self.log.info(f'Columns: {self._kline_features}')
+    self.log.info(f'Columns CAI: {self._kline_features["CAI"]}')
 
     self.log.info(f'Start _data_preprocessing...')
     self._data_preprocessing()
@@ -258,7 +332,7 @@ class RoboTrader():
     strategy = ''
     margin_operation = 0.0
     target_margin = 0.0
-    rsi = 0.0
+    rsi = {'CAI': 0.0, 'SOBE': 0.0}
     latest_closed_candle_open_time_aux = None
 
     balance = utils.get_account_balance()
@@ -270,11 +344,11 @@ class RoboTrader():
       take_profit = ledger.take_profit
       stop_loss = ledger.stop_loss
       amount_invested = ledger.amount_invested
-      rsi = ledger.rsi
+      rsi = {'CAI': ledger.rsi, 'SOBE': ledger.rsi}
       target_margin = ledger.target_margin
       strategy = ledger.strategy
       latest_closed_candle_open_time_aux = pd.to_datetime(ledger.operation_date)
-      self.log_buy(latest_closed_candle_open_time_aux, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi, True)
+      self.log_buy(latest_closed_candle_open_time_aux, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi[strategy], True)
 
     error = False
     while True:
@@ -288,7 +362,10 @@ class RoboTrader():
         if (not purchased) and (latest_closed_candle_open_time_aux != latest_closed_candle_open_time) and (balance > 0):
           latest_closed_candle_open_time_aux = latest_closed_candle_open_time
           rsi = self.feature_engineering_on_loop()
-          strategy, target_margin = self.predict_strategy()
+          strategy, target_margin = self.predict_strategy('CAI')
+          self.log.info(f'Predicted Strategy: {strategy} - Target Margin: {target_margin:.2f}%')
+          if strategy != 'CAI':
+            strategy, target_margin = self.predict_strategy('SOBE')
 
           if self.validate_short_or_long(strategy):  # If true, BUY
             purchased = True
@@ -299,15 +376,15 @@ class RoboTrader():
             self._mutex.acquire()
             amount_invested, balance = utils.get_amount_to_invest(register=True)
             ledger_params = utils.get_params_operation(latest_closed_candle_open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
-                                                       purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance)
+                                                       purchase_price, rsi[strategy], 0.0, 0.0, 0.0, strategy, balance)
             utils.register_operation(ledger_params)
             self._mutex.release()
             # End Lock
 
-            self.log_buy(latest_closed_candle_open_time_aux, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
+            self.log_buy(latest_closed_candle_open_time_aux, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi[strategy])
             self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
                            f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
-                           f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
+                           f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi[strategy]:.2f}\nBalance: $ {balance:.2f}')
             continue
 
         if purchased:  # and (operation.startswith('SOBE') or operation.startswith('CAI')):
@@ -327,19 +404,19 @@ class RoboTrader():
             self.log.debug(f'\nPerform SELL: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
                            f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}'
                            f'\nMargin Operation: {100*margin_operation:.2f}%\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%'
-                           f'\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
+                           f'\nRSI: {rsi[strategy]:.2f}\nBalance: $ {balance:.2f}')
 
             # Lock Thread to register SELL
             self._mutex.acquire()
             balance = utils.register_account_balance(amount_invested + profit_and_loss)
             ledger_params = utils.get_params_operation(latest_closed_candle_open_time, self._symbol, self._interval, 'SELL', target_margin, amount_invested, take_profit, stop_loss,
-                                                       purchase_price, rsi, actual_price, profit_and_loss, margin_operation, strategy, balance)
+                                                       purchase_price, rsi[strategy], actual_price, profit_and_loss, margin_operation, strategy, balance)
             utils.register_operation(ledger_params)
             self._mutex.release()
             # End Lock
 
             self.log_selling(latest_closed_candle_open_time, strategy, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
-                             take_profit, stop_loss, target_margin, rsi)
+                             take_profit, stop_loss, target_margin, rsi[strategy])
             # Reset variables
             purchased, purchase_price, amount_invested, take_profit, stop_loss, profit_and_loss, margin_operation, target_margin = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       except Exception as e:

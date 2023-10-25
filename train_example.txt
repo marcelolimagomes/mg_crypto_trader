@@ -77,7 +77,7 @@ python -m sklearnex . -batch-training -calc-rsi -normalize -no-tune -n-jobs=20 \
 -numeric-features=volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume \
 -regression-PnL-list=48 -regression-times-list=0 -start-train-date=2010-01-01 -start-test-date=2023-07-01
 
-python -m sklearnex . -batch-training -calc-rsi -normalize -no-tune -n-jobs=20 \
+python . -batch-training -calc-rsi -normalize -no-tune -n-jobs=20 \
 -symbol-list=BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,ADAUSDT,DOGEUSDT,SOLUSDT,TRXUSDT,DOTUSDT,MATICUSDT,LTCUSDT,BCHUSDT,AVAXUSDT,XLMUSDT,LINKUSDT,XMRUSDT,UNIUSDT,ATOMUSDT \
 -interval-list=15m -estimator-list=knn -stop-loss-list=1.0 \
 -numeric-features=volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume \

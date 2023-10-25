@@ -36,3 +36,5 @@ python . -batch-training -calc-rsi -normalize -no-tune -n-jobs=20 \
 -interval-list=15m -estimator-list=knn -stop-loss-list=1.0 \
 -numeric-features=volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume \
 -regression-PnL-list=60 -regression-times-list=0 -start-train-date=2022-02-01 -start-test-date=2023-07-01
+
+python . -batch-training -calc-rsi -normalize -no-tune -n-jobs=20 -symbol-list=BTCUSDT -interval-list=15m -estimator-list=knn -stop-loss-list=1.0 -numeric-features=volume,quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,taker_buy_quote_asset_volume -regression-PnL-list=60 -regression-times-list=0 -start-train-date=2022-02-01 -start-test-date=2023-07-01

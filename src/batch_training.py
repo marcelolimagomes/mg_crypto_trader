@@ -74,8 +74,6 @@ class BatchTrain:
     self.pl = f'BatchTrain: '
 
   # Class methods session
-  def get_ix_symbol(self, symbol, interval, stop_loss, times_regression_PnL):
-    return f'{symbol}_{interval}_SL_{stop_loss}_PnL_{times_regression_PnL}'
 
   def _data_collection(self):
     self.log.info(f'{self.pl}: Loading data to memory: Symbols: {self._symbol_list} - Intervals: {self._interval_list}')
@@ -83,7 +81,7 @@ class BatchTrain:
       for symbol in self._symbol_list:
         self.log.info(f'{self.pl}: Loading data for symbol: {symbol}_{interval}...')
         _aux_data = utils.get_data(
-            symbol=f'{symbol}',
+            symbol=symbol,
             save_database=False,
             interval=interval,
             tail=-1,
@@ -91,23 +89,8 @@ class BatchTrain:
             parse_dates=True,
             updata_data_from_web=self._update_data_from_web,
             start_date=self._start_train_date)
-        
-        min_date = _aux_data['open_time'].min()
-        max_date = _aux_data['open_time'].max()
-        self.log.info(f'{self.pl}: Data Loaded: Min date: {min_date} - Max date: {max_date}')
-        validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')
-        
-        self.log.info(f'{self.pl}: Filtering all data: days_to_validate_train_data: {myenv.days_to_validate_train} days')
-        min_index = _aux_data[_aux_data['open_time'] < validate_start_data].tail(myenv.rows_to_train).index.min()
-        real_rows_to_train = _aux_data[_aux_data['open_time'] < validate_start_data].tail(myenv.rows_to_train).shape[0]
-        real_rols_to_validate = _aux_data[_aux_data['open_time'] >= validate_start_data].shape[0]
-        _aux_data = _aux_data[_aux_data.index >= min_index]
 
-        min_date = _aux_data['open_time'].min()
-        max_date = _aux_data['open_time'].max()
-        self.log.info(f'{self.pl}: All Data Filtered: train_start_date: {min_date} - validate_start_data: {validate_start_data} - max_date: {max_date}')
-        self.log.info(f'{self.pl}: rows_to_train: {real_rows_to_train} - rows_to_validate: {real_rols_to_validate} - All Data Shape: {_aux_data.shape[0]}')
-
+        _aux_data = utils.truncate_data_to_train(_aux_data)        
         try:
           self.log.info(f'{self.pl}: Calculating RSI for symbol: {symbol}_{interval}...')
           _aux_data = calc_utils.calc_RSI(_aux_data)
@@ -118,7 +101,7 @@ class BatchTrain:
         for stop_loss in self._stop_loss_list:
           for times_regression_PnL in self._times_regression_PnL_list:
             try:
-              ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
+              ix_symbol = utils.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
               self.log.info(f'{self.pl}: Store data in memory for symbol: {ix_symbol}...')
               self._all_data_list[ix_symbol] = _aux_data.copy()
               if self._all_data_list[ix_symbol].shape[0] == 0:
@@ -134,9 +117,10 @@ class BatchTrain:
         for stop_loss in self._stop_loss_list:
           for times_regression_PnL in self._times_regression_PnL_list:
             try:
-              ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
+              ix_symbol = utils.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
               self.log.info(f'{self.pl}: Calculating EMA\'s for key {ix_symbol}...')
               self._all_data_list[ix_symbol].info() if self._verbose else None
+
               self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(times_regression_PnL), 200])
               self.log.info(f'{self.pl}:  info after calculating EMA\'s: ') if self._verbose else None
               self._all_data_list[ix_symbol].info() if self._verbose else None
@@ -151,6 +135,7 @@ class BatchTrain:
                   drop_na=True,
                   drop_calc_cols=True,
                   strategy=None)
+              
               self.log.info(f'{self.pl}:  info after calculating regression_profit_and_loss: ') if self._verbose else None
               self._all_data_list[ix_symbol].info() if self._verbose else None
             except Exception as e:
@@ -179,11 +164,12 @@ class BatchTrain:
                 nf_list = nf_list.replace('ema_XXXp', f'ema_{times_regression_PnL}p')
                 for rt_list in self._regression_times_list:
                   for imbalance_method in imbalance_list:
-                    ix_symbol = self.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
+                    ix_symbol = utils.get_ix_symbol(symbol, interval, stop_loss, times_regression_PnL)
                     if rt_list != '0':
                       for rf_list in self._regression_features_list:                        
                         train_param = {
                             'all_data': self._all_data_list[ix_symbol],
+                            'strategy': None,
                             'symbol': symbol,
                             'interval': interval,
                             'estimator': estimator,
@@ -212,6 +198,7 @@ class BatchTrain:
                     else:
                       train_param = {
                           'all_data': self._all_data_list[ix_symbol],
+                          'strategy': None,
                           'symbol': symbol,
                           'interval': interval,
                           'estimator': estimator,

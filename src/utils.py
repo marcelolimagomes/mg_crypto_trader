@@ -27,6 +27,44 @@ import numpy as np
 
 log = logging.getLogger()
 
+def get_ix_symbol(symbol, interval, stop_loss, times_regression_profit_and_loss):
+  return f'{symbol}_{interval}_SL_{stop_loss}_PnL_{times_regression_profit_and_loss}'
+
+def truncate_data_to_train(data):
+  min_date = data['open_time'].min()
+  max_date = data['open_time'].max()
+  log.info(f'Data Loaded: Min date: {min_date} - Max date: {max_date}')
+  validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')
+  
+  log.info(f'Filtering all data: days_to_validate_train_data: {myenv.days_to_validate_train} days')
+  min_index = data[data['open_time'] < validate_start_data].tail(myenv.rows_to_train).index.min()
+  real_rows_to_train = data[data['open_time'] < validate_start_data].tail(myenv.rows_to_train).shape[0]
+  real_rols_to_validate = data[data['open_time'] >= validate_start_data].shape[0]
+  data = data[data.index >= min_index]
+
+  min_date = data['open_time'].min()
+  max_date = data['open_time'].max()
+  log.info(f'All Data Filtered: train_start_date: {min_date} - validate_start_data: {validate_start_data} - max_date: {max_date}')
+  log.info(f'rows_to_train: {real_rows_to_train} - rows_to_validate: {real_rols_to_validate} - All Data Shape: {data.shape[0]}')
+  return data
+
+def split_train_test_data(data):  
+  log.info(f'Prepare Train Data...')
+  max_date = data['open_time'].max()
+  validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
+  max_index = data[data['open_time'] < validate_start_data].index.max()
+
+  _train_data = data[data.index <= max_index]
+  log.info(f'Setup model - train_data.shape: {_train_data.shape}')
+  log.info(f'Setup model - train_data: label stats: \n{_train_data.groupby(myenv.label)[myenv.label].count()}')
+
+  log.info(f'Prepare Test Data...')
+  _test_data = data[(data.index > max_index)]
+  log.info(f'Setup model - test_data.shape: {_test_data.shape}')
+  log.info(f'Setup model - test_data: label stats: \n{_test_data.groupby(myenv.label)[myenv.label].count()}')
+
+  return _train_data, _test_data
+
 
 def get_start_timestamp_for_interval(interval):
   date = None
@@ -153,9 +191,18 @@ def prepare_best_params():
     if os.path.isfile(file_path):
       df = pd.read_csv(file_path, sep=';')
     df['count_numeric_features'] = df['numeric_features'].apply(lambda x: len(x.split(',')))
-    df.sort_values(['final_score', 'count_numeric_features'], ascending=[True, False], inplace=True)
-    df_top_params = pd.concat([df_top_params, df.tail(1)], ignore_index=True)
 
+    df.sort_values(['CAI', 'count_numeric_features'], ascending=[True, False], inplace=True)
+    df_aux = df.tail(1)
+    df_aux.insert(1, 'strategy', 'CAI')
+    df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+
+    df.sort_values(['SOBE', 'count_numeric_features'], ascending=[True, False], inplace=True)
+    df_aux = df.tail(1)
+    df_aux.insert(1, 'strategy', 'SOBE')
+    df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+
+  df_top_params.sort_values(['symbol', 'interval', 'strategy', 'estimator', 'imbalance_method'], inplace=True)
   top_paramers_filename = f'{myenv.datadir}/top_params.csv'
   log.info(f'Top Parameters save to: {top_paramers_filename}')
   df_top_params.to_csv(top_paramers_filename, sep=';', index=False)
@@ -558,6 +605,7 @@ def plot_predic_model(predict_data, validation_data, estimator):
 
 
 def get_model_name_to_load(
+        strategy,
         symbol,
         interval='1h',
         estimator=myenv.estimator,
@@ -569,13 +617,15 @@ def get_model_name_to_load(
   '''
   model_name = None
   for i in range(9999, 0, -1):
-    model_name = f'{symbol}_{interval}_{estimator}_SL_{stop_loss}_RT_{regression_times}_RPL_{times_regression_profit_and_loss}_{i}'
-    if os.path.exists(f'{model_name}.pkl'):
+    aux_model_name = f'{strategy}_{symbol}_{interval}_{estimator}_SL_{stop_loss}_RT_{regression_times}_RPL_{times_regression_profit_and_loss}_{i}'
+    if os.path.exists(f'{aux_model_name}.pkl'):
+      model_name = aux_model_name
       break
   return model_name
 
 
 def get_model_name_to_save(
+        strategy,
         symbol,
         interval,
         estimator='xgboost',
@@ -585,7 +635,7 @@ def get_model_name_to_save(
 
   model_name = None
   for i in range(1, 9999):
-    model_name = f'{symbol}_{interval}_{estimator}_SL_{stop_loss}_RT_{regression_times}_RPL_{times_regression_profit_and_loss}_{i}'
+    model_name = f'{strategy}_{symbol}_{interval}_{estimator}_SL_{stop_loss}_RT_{regression_times}_RPL_{times_regression_profit_and_loss}_{i}'
     if os.path.exists(f'{model_name}.pkl'):
       continue
     else:
@@ -594,6 +644,7 @@ def get_model_name_to_save(
 
 
 def save_model(
+        strategy,
         symbol,
         interval,
         model,
@@ -603,16 +654,18 @@ def save_model(
         regression_times=myenv.regression_times,
         times_regression_profit_and_loss=myenv.times_regression_profit_and_loss):
 
-  model_name = get_model_name_to_save(symbol, interval, estimator, stop_loss, regression_times, times_regression_profit_and_loss)
+  model_name = get_model_name_to_save(strategy, symbol, interval, estimator, stop_loss, regression_times, times_regression_profit_and_loss)
   log.info(f'save_model: Model file name: {model_name}')
   experiment.save_model(model, model_name)
   return model_name
 
 
-def load_model(symbol, interval, estimator=myenv.estimator, stop_loss=myenv.stop_loss, regression_times=myenv.regression_times, times_regression_profit_and_loss=myenv.times_regression_profit_and_loss):
-  ca = ClassificationExperiment()
-  model_name = get_model_name_to_load(symbol, interval, estimator, stop_loss, regression_times, times_regression_profit_and_loss)
+def load_model(strategy, symbol, interval, estimator=myenv.estimator, stop_loss=myenv.stop_loss, regression_times=myenv.regression_times, times_regression_profit_and_loss=myenv.times_regression_profit_and_loss):
+  model_name = get_model_name_to_load(strategy, symbol, interval, estimator, stop_loss, regression_times, times_regression_profit_and_loss)
+  if model_name is None:
+    return None, None
   log.info(f'load_model: Loading model: {model_name}')
+  ca = ClassificationExperiment()
   model = ca.load_model(model_name, verbose=False)
   log.info(f'load_model: Model obj: {model}')
 
@@ -694,13 +747,7 @@ def adjust_index(df):
   df.sort_index(inplace=True)
   return df
 
-
-def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
-  # return pd.DataFrame()
-  start_time = datetime.now()
-  client = Client()
-  klines = client.get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
-
+def remove_cols_for_klines(columns):
   cols_to_remove = ['symbol', 'rsi']
   for col in columns:
     if col.startswith('ema'):
@@ -708,6 +755,16 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
   for col in cols_to_remove:
     if col in columns:
       columns.remove(col)
+  return columns
+  
+
+def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
+  # return pd.DataFrame()
+  start_time = datetime.now()
+  client = Client()
+  klines = client.get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
+
+  columns = remove_cols_for_klines(columns)
 
   # log.info('get_klines: columns: ', columns)
   df_klines = pd.DataFrame(data=klines, columns=myenv.all_klines_cols)[columns]
@@ -1124,3 +1181,18 @@ def has_results(symbol,
       return True
 
   return False
+
+def get_params_robo_trader(params, param_name, type = None, split = False):
+
+  cai = params['CAI'][param_name]
+  sobe = params['SOBE'][param_name]
+  
+  if split:
+    cai = cai.split(',')
+    sobe = sobe.split(',')
+  
+  match type:
+    case 'int': return {'CAI': int(cai), 'SOBE': int(sobe)}
+    case 'float': return {'CAI': float(cai), 'SOBE': float(sobe)}
+    
+  return {'CAI': cai, 'SOBE': sobe}

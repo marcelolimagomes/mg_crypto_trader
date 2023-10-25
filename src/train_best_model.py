@@ -26,16 +26,22 @@ class TrainBestModel:
     self.log.info(f'Loading data to memory: Symbols: {[s["symbol"] for s in self._top_params]} - Intervals: {[s["interval"] for s in self._top_params]}')
     for param in self._top_params:
       try:
-        ix_symbol = f'{param["symbol"]}_{param["interval"]}'
-        self.log.info(f'Loading data for symbol: {ix_symbol}...')
-        self._all_data_list[ix_symbol] = utils.get_data(
-            symbol=f'{param["symbol"]}',
-            save_database=False,
-            interval=param['interval'],
-            tail=-1,
-            columns=myenv.all_cols,
-            parse_dates=True,
-            updata_data_from_web=False)
+        ix_symbol = utils.get_ix_symbol(param["symbol"], param["interval"], param["stop_loss"], param["times_regression_profit_and_loss"])
+        if ix_symbol not in self._all_data_list:
+          self.log.info(f'Loading data for symbol: {ix_symbol}...')
+          _aux_data = utils.get_data(
+              symbol=param["symbol"],
+              save_database=False,
+              interval=param['interval'],
+              tail=-1,
+              columns=myenv.all_cols,
+              parse_dates=True,
+              updata_data_from_web=False)
+          
+          _aux_data = _aux_data.tail(myenv.rows_to_train)
+          self._all_data_list[ix_symbol] = _aux_data
+          self.log.info(f'Loaded data for symbol: {ix_symbol} - shape: {_aux_data.shape}')
+          _aux_data.info() if self._verbose else None
       except Exception as e:
         self.log.error(e)
     self.log.info(f'Loaded data to memory for symbols: {[s["symbol"] for s in self._top_params]}')
@@ -43,21 +49,37 @@ class TrainBestModel:
   def _data_preprocessing(self):
     self.log.info('Prepare All Data...')
     for param in self._top_params:
-      ix_symbol = f'{param["symbol"]}_{param["interval"]}'
+      ix_symbol = utils.get_ix_symbol(param["symbol"], param["interval"], param["stop_loss"], param["times_regression_profit_and_loss"])
       try:
         self.log.info(f'Calculating EMA\'s for key {ix_symbol}...')
-        self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
-        self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
-        self._all_data_list[ix_symbol].info() if self._verbose else None
+        if 'ema_200p' not in self._all_data_list[ix_symbol].columns:
+          self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
+          self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
+          self._all_data_list[ix_symbol].info() if self._verbose else None
 
-        self.log.info(f'Calc RSI for symbol: {ix_symbol}')
-        self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
-        self._all_data_list[ix_symbol].dropna(inplace=True)
-        self.log.info('info after CalcRSI start_date: ') if self._verbose else None
-        self._all_data_list[ix_symbol].info() if self._verbose else None
+        if 'rsi' not in self._all_data_list[ix_symbol].columns:
+          self.log.info(f'Calc RSI for symbol: {ix_symbol}')
+          self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
+          #self._all_data_list[ix_symbol].dropna(inplace=True)
+          self.log.info('info after CalcRSI start_date: ') if self._verbose else None
+          self._all_data_list[ix_symbol].info() if self._verbose else None
+
+        if myenv.label not in self._all_data_list[ix_symbol]:
+          self.log.info(f'calculating regression_profit_and_loss - times: {int(param["times_regression_profit_and_loss"])} - stop_loss: {float(param["stop_loss"])}')
+          self._all_data_list[ix_symbol] = utils.regression_PnL(
+              data=self._all_data_list[ix_symbol],
+              label=myenv.label,
+              diff_percent=float(param['stop_loss']),
+              max_regression_profit_and_loss=int(param['times_regression_profit_and_loss']),
+              drop_na=True,
+              drop_calc_cols=True,
+              strategy=None)
+          self.log.info('info after calculating regression_profit_and_loss: ')
+          self._all_data_list[ix_symbol].info() if self._verbose else None
+
       except Exception as e:
         self.log.error(e)
-
+  
   def run(self):
     self.log.info(f'{self.__class__.__name__}: Start _data_collection...')
     self._data_collection()
@@ -76,9 +98,10 @@ class TrainBestModel:
         if (p.startswith('-fold=')):
           fold = int(p.split('=')[1])
 
-      ix_symbol = f'{param["symbol"]}_{param["interval"]}'
+      ix_symbol = utils.get_ix_symbol(param["symbol"], param["interval"], param["stop_loss"], param["times_regression_profit_and_loss"])
       train_param = {
           'all_data': self._all_data_list[ix_symbol],
+          'strategy': param['strategy'],
           'symbol': param['symbol'],
           'interval': param['interval'],
           'estimator': param['estimator'],
