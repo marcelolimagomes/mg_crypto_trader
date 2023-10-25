@@ -366,6 +366,8 @@ class RoboTrader():
           self.log.info(f'Predicted Strategy: {strategy} - Target Margin: {target_margin:.2f}%')
           if strategy != 'CAI':
             strategy, target_margin = self.predict_strategy('SOBE')
+            if strategy != 'SOBE':
+              strategy = 'ESTAVEL'
 
           if self.validate_short_or_long(strategy):  # If true, BUY
             purchased = True
