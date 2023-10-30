@@ -195,12 +195,14 @@ def prepare_best_params():
     df.sort_values(['CAI', 'count_numeric_features'], ascending=[True, False], inplace=True)
     df_aux = df.tail(1)
     df_aux.insert(1, 'strategy', 'CAI')
-    df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+    if df_aux['max_score'].values[0] > 0.5:
+      df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
     df.sort_values(['SOBE', 'count_numeric_features'], ascending=[True, False], inplace=True)
     df_aux = df.tail(1)
     df_aux.insert(1, 'strategy', 'SOBE')
-    df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+    if df_aux['max_score'].values[0] > 0.5:
+      df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
   df_top_params.sort_values(['symbol', 'interval', 'strategy', 'estimator', 'imbalance_method'], inplace=True)
   top_paramers_filename = f'{myenv.datadir}/top_params.csv'
@@ -1065,7 +1067,8 @@ def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, valu
 
 def validate_score_test_data(exp, final_model, label, test_data, ajusted_test_data):
   log.info('start_train_engine: predicting final model...')
-  df_final_predict = exp.predict_model(final_model, data=ajusted_test_data)
+
+  df_final_predict = exp.predict_model(final_model, data=ajusted_test_data, raw_score=False, verbose=False)
 
   res_score = None
   if test_data is not None:

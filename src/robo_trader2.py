@@ -357,6 +357,7 @@ class RoboTrader():
         # Update data
         balance = utils.get_account_balance()
         actual_price, latest_closed_candle_open_time = self.update_data_from_web()
+        latest_closed_candle_open_time_aux = latest_closed_candle_open_time
 
         # Apply predict only on time per interval
         if (not purchased) and (latest_closed_candle_open_time_aux != latest_closed_candle_open_time) and (balance > 0):

@@ -1,0 +1,7 @@
+date;symbol;interval;estimator;fix_imbalance_method;stop_loss;times_regression_profit_and_loss;features;CAI;ESTAVEL;SOBE;max_score
+2023-10-27 18:47:58;ETHUSDT;1m;knn;allknn;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];0.0;1.0;0.0;0.0
+2023-10-27 18:48:28;ETHUSDT;1m;knn;instancehardnessthreshold;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];0.0;0.9998;0.0;0.0
+2023-10-27 18:48:50;ETHUSDT;1m;knn;repeatededitednearestneighbours;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];0.0;1.0;0.0;0.0
+2023-10-27 18:55:02;ETHUSDT;1m;knn;allknn;1.0;120;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_120p'];0.0;0.9998;0.0003;0.0003
+2023-10-27 18:55:51;ETHUSDT;1m;knn;repeatededitednearestneighbours;1.0;120;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_120p'];0.0;0.9995;0.0009;0.0009
+2023-10-27 18:55:28;ETHUSDT;1m;knn;instancehardnessthreshold;1.0;120;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_120p'];0.0236;0.9685;0.1245;0.1245

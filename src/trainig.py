@@ -50,6 +50,7 @@ class Train:
     self._final_model = None
     self._train_data = None
     self._test_data = None
+    self._aux_all_cols = None
 
     # Prefix for log
     self.pl = f'Train: {self._symbol}-{self._interval}-{self._estimator}'
@@ -107,12 +108,12 @@ class Train:
 
     aux_numeric_features = self._numeric_features.split(',')
     aux_numeric_features += self._features_added
-    aux_all_cols = []
-    aux_all_cols += myenv.date_features
-    aux_all_cols += aux_numeric_features
-    aux_all_cols += [myenv.label]
+    self._aux_all_cols = []
+    self._aux_all_cols += myenv.date_features
+    self._aux_all_cols += aux_numeric_features
+    self._aux_all_cols += [myenv.label]
 
-    self.log.info(f'{self.pl}: Setup model - aux_all_cols: {aux_all_cols}')
+    self.log.info(f'{self.pl}: Setup model - aux_all_cols: {self._aux_all_cols}')
     self.log.info(f'{self.pl}: Setup model - numeric_features: {aux_numeric_features}')
     self.log.info(f'{self.pl}: Setup model - imbalance_method: {self._imbalance_method}')
     self._experiement = ClassificationExperiment()
@@ -127,7 +128,7 @@ class Train:
         imbalance_method = AllKNN(allow_minority=False, kind_sel='all', n_jobs=20, n_neighbors=3, sampling_strategy='auto')
 
     self._setup = self._experiement.setup(
-        data=self._train_data[aux_all_cols].copy(),
+        data=self._train_data[self._aux_all_cols].copy(),
         train_size=self._train_size,
         target=myenv.label,
         numeric_features=aux_numeric_features,
@@ -151,12 +152,12 @@ class Train:
     # Accuracy	AUC	Recall	Prec.	F1	Kappa	MCC
     if self._compare_models:
       self.log.info(f'{self.pl}: comparing models...')
-      self._model = self._setup.compare_models()
+      self._model = self._setup.compare_models(verbose=self._verbose)
       self._estimator = self._setup.pull().index[0]
       self.log.info(f'{self.pl}: Best Model Estimator: {self._estimator}')
     else:
       self.log.info(f'{self.pl}: creating model...')
-      self._model = self._setup.create_model(self._estimator)
+      self._model = self._setup.create_model(self._estimator, return_train_score=False, verbose=self._verbose)
 
   def _model_evaluation(self):
     return
@@ -165,10 +166,10 @@ class Train:
     self._tune_model = self._model
     if not self._no_tune:
       self.log.info(f'{self.pl}: Tuning model...')
-      self._tune_model = self._setup.tune_model(self._model)
+      self._tune_model = self._setup.tune_model(self._model, return_train_score=False, verbose=self._verbose)
 
     self.log.info(f'{self.pl}: Finalizing model...')
-    self._final_model = self._setup.finalize_model(self._tune_model)
+    self._final_model = self._setup.finalize_model(self._tune_model, model_only=True)
 
   def _finalize_training(self):
     model_name = '<< NOT SAVED >>'
@@ -202,7 +203,7 @@ class Train:
     #saldo_final = 0.0
 
     if not self._use_all_data_to_train:
-      ajusted_test_data = self._test_data.drop(myenv.label, axis=1)
+      ajusted_test_data = self._test_data[self._aux_all_cols]
       df_final_predict, res_score = utils.validate_score_test_data(
           self._setup,
           self._final_model,

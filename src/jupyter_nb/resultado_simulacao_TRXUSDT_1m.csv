@@ -1,0 +1,5 @@
+date;symbol;interval;estimator;fix_imbalance_method;stop_loss;times_regression_profit_and_loss;features;CAI;ESTAVEL;SOBE;max_score
+2023-10-27 22:03:27;TRXUSDT;1m;knn;repeatededitednearestneighbours;1.0;120;['open_time', 'status', 'volume', 'number_of_trades'];0.0;0.5091;0.0;0.0
+2023-10-27 19:04:20;TRXUSDT;1m;knn;allknn;1.0;120;['open_time', 'status', 'volume', 'number_of_trades'];0.0;0.9799;0.0095;0.0095
+2023-10-27 19:04:33;TRXUSDT;1m;knn;instancehardnessthreshold;1.0;120;['open_time', 'status', 'volume', 'number_of_trades'];0.1508;0.805;0.0536;0.1508
+2023-10-27 21:58:04;TRXUSDT;1m;knn;repeatededitednearestneighbours;0.5;120;['open_time', 'status', 'volume', 'number_of_trades'];0.0004;0.5241;0.5322;0.5322
