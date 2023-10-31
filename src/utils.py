@@ -1187,15 +1187,22 @@ def has_results(symbol,
 
 def get_params_robo_trader(params, param_name, type = None, split = False):
 
-  cai = params['CAI'][param_name]
-  sobe = params['SOBE'][param_name]
+  cai = params['CAI'][param_name] if 'CAI' in params else None
+  sobe = params['SOBE'][param_name] if 'SOBE' in params else None
   
   if split:
-    cai = cai.split(',')
-    sobe = sobe.split(',')
+    cai = cai.split(',') if cai is not None else None
+    sobe = sobe.split(',') if sobe is not None else None
   
+  result = {}
   match type:
-    case 'int': return {'CAI': int(cai), 'SOBE': int(sobe)}
-    case 'float': return {'CAI': float(cai), 'SOBE': float(sobe)}
+    case 'int': 
+      result['CAI'] = int(cai) if cai is not None else 0
+      result['SOBE'] = int(sobe) if sobe is not None else 0
+      return result
+    case 'float': 
+      result['CAI'] = float(cai) if cai is not None else 0.0
+      result['SOBE'] = float(sobe) if sobe is not None else 0.0
+      return result
     
   return {'CAI': cai, 'SOBE': sobe}
