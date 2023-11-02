@@ -1,3 +1,0 @@
-date;symbol;interval;estimator;fix_imbalance_method;stop_loss;times_regression_profit_and_loss;features;CAI;ESTAVEL;SOBE;max_score
-2023-10-20 09:22:28;BTCUSDT;1h;knn;allknn;1.0;24;['open_time', 'status', 'volume', 'taker_buy_base_asset_volume', 'ema_24p'];0.3593;0.1217;0.5774;0.5774
-2023-10-20 09:19:35;BTCUSDT;1h;knn;instancehardnessthreshold;1.0;24;['open_time', 'status', 'volume', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ema_24p'];0.6305;0.1347;0.3287;0.6305

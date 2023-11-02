@@ -35,12 +35,12 @@ train_size = 0.7
 estimator = 'xgboost'
 symbol = 'BTCUSDT'
 saldo_inicial = 100
-stop_loss_multiplier = 2
+stop_loss_multiplier = 5
 default_amount_invested = 100
 initial_amount_balance = 10000
 rows_to_train = 50000
 
-days_to_validate_train = 30 * 3 # Tree months
+days_to_validate_train = 90 # Tree months
 
 sleep_refresh = 5  # seconds
 

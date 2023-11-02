@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 import threading
 
 from sqlalchemy import desc
+from sqlalchemy.sql import functions 
 from sqlalchemy.orm import Session
 
 import numpy as np
@@ -134,6 +135,13 @@ def get_amount_to_invest(register=True):
   session.close()
 
   return amount_invested, balance
+
+def get_sum_pnl():
+  session = Session(models.engine)
+  result = session.query(functions.sum(models.Ledger.pnl)).scalar()
+  session.close()
+
+  return result
 
 
 def register_operation(params):
@@ -936,7 +944,7 @@ def regress_until_diff(data: pd.DataFrame, diff_percent: float, max_regression_p
   return data
 
 
-def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, value: float, stop_loss=3.0, revert=False):
+def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, value: float):
   _data = df_predicted.copy()
   _data.index = _data['open_time']
   _data = _data[(_data.index >= start_date) & (_data.index <= end_date)]
@@ -962,7 +970,8 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
     amount_invested = balance
     # log.debug(f'Actual Price: $ {actual_price:.6f} - Operation: {operation} - Purchased: {purchased}')
 
-    rsi = _data.iloc[row_nu:row_nu + 1]['rsi'].values[0]
+    if 'rsi' in _data.columns:
+      rsi = _data.iloc[row_nu:row_nu + 1]['rsi'].values[0]
     # Start Buy Operation
     if (not purchased):
       prediction_label = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]

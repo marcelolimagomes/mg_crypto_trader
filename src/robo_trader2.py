@@ -307,9 +307,11 @@ class RoboTrader():
       _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
     else:
       _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
+
+    sum_pnl = utils.get_sum_pnl()
     msg = f'*SELLING*: Symbol: {self._symbol}_{self._interval} - Open Time: {_open_time} - Strategy: {strategy} - Target Margin: {target_margin:.2f}% '
     msg += f'- Purchased Price: $ {purchase_price:.6f} - Actual Price: $ {actual_price:.6f} - Margin Operation: {100*margin_operation:.2f}% - Amount invested: $ {amount_invested:.2f} '
-    msg += f'- PnL: $ {profit_and_loss:.2f} - Take Profit: $ {take_profit:.6f} - Stop Loss: $ {stop_loss:.6f} - RSI: {rsi:.2f} - Balance: $ {balance:.2f}'
+    msg += f'- Take Profit: $ {take_profit:.6f} - Stop Loss: $ {stop_loss:.6f} - RSI: {rsi:.2f} - Balance: $ {balance:.2f} - PnL Operation: $ {profit_and_loss:.2f} - Sum PnL: $ {sum_pnl:.2f}'
     self.log.info(f'{msg}')
     sm.send_to_telegram(msg)
 

@@ -1,5 +1,0 @@
-date;symbol;interval;estimator;fix_imbalance_method;stop_loss;times_regression_profit_and_loss;features;final_value;score
-2023-10-16 17:18:18;BTCUSDT;1m;knn;smoteenn;1.0;120;['open_time', 'status', 'number_of_trades'];594.6794622948462;[CAI_1.0=0.20][ESTAVEL=0.39][SOBE_1.0=0.55]
-2023-10-16 17:21:47;BTCUSDT;1m;knn;allknn;1.0;120;['open_time', 'status', 'number_of_trades'];596.5572576764636;[CAI_1.0=0.17][ESTAVEL=0.57][SOBE_1.0=0.39]
-2023-10-16 17:20:00;BTCUSDT;1m;knn;repeatededitednearestneighbours;1.0;120;['open_time', 'status', 'number_of_trades'];604.9245212679451;[CAI_1.0=0.04][ESTAVEL=0.50][SOBE_1.0=0.64]
-2023-10-16 17:16:11;BTCUSDT;1m;knn;instancehardnessthreshold;1.0;120;['open_time', 'status', 'number_of_trades'];664.550413108571;[CAI_1.0=0.44][ESTAVEL=0.33][SOBE_1.0=0.38]
