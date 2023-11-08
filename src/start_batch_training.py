@@ -45,6 +45,8 @@ def main(args):
   no_tune = False
   update_database = False
   save_model = False
+  feature_selection = False
+  combine_features = False
 
   # Single arguments
   start_train_date = '2010-01-01'
@@ -87,6 +89,10 @@ def main(args):
       update_database = True
     if (arg.startswith('-save-model')):
       save_model = True
+    if (arg.startswith('-feature-selection')):
+      feature_selection = True
+    if (arg.startswith('-combine-features')):
+      combine_features = True
 
     # Single arguments
     if (arg.startswith('-start-train-date=')):
@@ -134,10 +140,13 @@ def main(args):
 
     if (arg.startswith('-numeric-features=')):
       aux = arg.split('=')[1]
+      aux += 'ema_XXXp,ema_200p' if aux == '' else ',ema_XXXp,ema_200p'      
       if ('-calc-rsi' in args) and ('rsi' not in aux):
         aux += ',rsi'
-      aux += ',ema_XXXp,ema_200p'
-      numeric_features_list = prepare_numeric_features_list(aux.split(','))
+      if combine_features:
+        numeric_features_list = prepare_numeric_features_list(aux.split(','))
+      else:
+        numeric_features_list = [aux]
 
     if (arg.startswith('-regression-PnL-list=')):
       aux = arg.split('=')[1]
@@ -149,7 +158,10 @@ def main(args):
 
     if (arg.startswith('-regression-features=')):
       aux = arg.split('=')[1]
-      regression_features_list = combine_list(aux.split(','))
+      if combine_features:
+        regression_features_list = combine_list(aux.split(','))
+      else:
+        regression_features_list = [aux]
 
   logger = configure_log(log_level)
 
@@ -173,6 +185,8 @@ def main(args):
       use_all_data_to_train,
       revert,
       no_tune,
+      feature_selection,
+      combine_features,
       save_model,
       start_train_date,
       start_test_date,

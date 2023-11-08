@@ -124,6 +124,8 @@ class TrainBestModel:
           'use_all_data_to_train': True,
           'arguments': param['arguments'],
           'no_tune': '-no-tune' in param['arguments'],
+          'feature_selection': '-feature-selection' in param['arguments'],
+          'combine_features': '-combine-features' in param['arguments'],          
           'save_model': True}
       params_list.append(train_param)
 

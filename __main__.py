@@ -10,7 +10,7 @@ print(file, parent, os.getcwd())
 os.environ["PYCARET_CUSTOM_LOGGING_LEVEL"] = "CRITICAL"
 
 import src.train as tr
-import src.batch_analysis as ba
+#import src.batch_analysis as ba
 import src.start_batch_training as bt
 import src.start_robo_trader as bot
 import src.myenv as myenv
@@ -99,11 +99,12 @@ def main(args):
     bot.main(args)
     sys.exit(0)
 
+  '''
   if '-batch-analysis' in args:
     log.info('Starting batch analysis...')
     ba.main(args)
     sys.exit(0)
-
+  '''
   if '-batch-training' in args:
     log.info('Starting batch training...')
     bt.main(args)

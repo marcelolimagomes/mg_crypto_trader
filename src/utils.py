@@ -251,8 +251,6 @@ def prepare_numeric_features_list(list_of_numeric_features):
           res += f'{j},'
         combination_numeric_features.append(res[0:len(res) - 1])
 
-  print(f'combination_numeric_features: {combination_numeric_features}')
-  print(f'combination_numeric_features SIZE: {len(combination_numeric_features)}')
   return combination_numeric_features
 
 

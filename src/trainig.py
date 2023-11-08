@@ -39,6 +39,8 @@ class Train:
     self._use_all_data_to_train = params['use_all_data_to_train']
     self._arguments = params['arguments']
     self._no_tune = params['no_tune']
+    self._feature_selection = params['feature_selection']
+    self._combine_features = params['combine_features']
     self._save_model = params['save_model']
 
     # Internal atributes
@@ -137,7 +139,9 @@ class Train:
         data_split_shuffle=False,
         data_split_stratify=False,
         fix_imbalance=True,
-        fix_imbalance_method=imbalance_method,
+        fix_imbalance_method=imbalance_method,        
+        feature_selection=self._feature_selection,
+        feature_selection_estimator='rf',
         remove_outliers=True,
         fold_strategy='timeseries',
         fold=self._fold,
@@ -145,8 +149,8 @@ class Train:
         normalize=self._normalize,
         use_gpu=self._use_gpu,
         verbose=self._verbose,
-        n_jobs=self._n_jobs,
-        log_experiment=self._verbose)
+        n_jobs=self._n_jobs
+        )
 
   def _model_training(self):
     # Accuracy	AUC	Recall	Prec.	F1	Kappa	MCC

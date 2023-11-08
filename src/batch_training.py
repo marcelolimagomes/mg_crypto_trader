@@ -22,6 +22,8 @@ class BatchTrain:
                use_all_data_to_train,
                revert,
                no_tune,
+               feature_selection,
+               combine_features,
                save_model,
                start_train_date,
                start_test_date,
@@ -47,6 +49,8 @@ class BatchTrain:
     self._use_all_data_to_train = use_all_data_to_train
     self._revert = revert
     self._no_tune = no_tune
+    self._feature_selection = feature_selection
+    self._combine_features = combine_features
     self._save_model = save_model
     # Single arguments
     self._start_train_date = start_train_date
@@ -192,6 +196,8 @@ class BatchTrain:
                             'use_all_data_to_train': self._use_all_data_to_train,
                             'arguments': str(sys.argv[1:]),
                             'no_tune': self._no_tune,
+                            'feature_selection': self._feature_selection,
+                            'combine_features': self._combine_features,
                             'save_model': self._save_model}
                         params_list.append(train_param)
                         _prm_list.append(train_param.copy())
@@ -221,6 +227,8 @@ class BatchTrain:
                           'use_all_data_to_train': self._use_all_data_to_train,
                           'arguments': str(sys.argv[1:]),
                           'no_tune': self._no_tune,
+                          'feature_selection': self._feature_selection,
+                          'combine_features': self._combine_features,
                           'save_model': self._save_model}
                       params_list.append(train_param)
                       _prm_list.append(train_param.copy())
