@@ -239,6 +239,14 @@ def get_symbol_list():
     result.append(symbol)
   return result
 
+def get_symbol_interval_list():
+  symbol_list = get_symbol_list()
+  result_list = []
+  for interval in myenv.interval_list:
+    for symbol in symbol_list:
+      result_list.append([symbol, interval])
+  return result_list
+
 
 def prepare_numeric_features_list(list_of_numeric_features):
   combination_numeric_features = []
@@ -732,7 +740,7 @@ def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'],
     df_database = adjust_index(df_database)
     df_database = df_database[columns]
   if tail > 0:
-    df_database = df_database.tail(tail).copy()
+    df_database = df_database.tail(tail)
   log.info(f'get_database: count_rows: {df_database.shape[0]} - symbol: {symbol}_{interval} - tail: {tail}')
   log.info(f'get_database: duplicated: {df_database.index.duplicated().sum()}')
   return df_database
@@ -854,6 +862,8 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
     log.info(f'get_data: Database updated at {database_name}')
 
   log.info(f'New shape after get_data: {df_database.shape}')
+  if tail > 0:
+    df_database = df_database.tail(tail)
   return df_database
 
 

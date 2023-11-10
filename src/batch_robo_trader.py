@@ -1,4 +1,5 @@
-from src.robo_trader2 import RoboTrader
+from src.robo_trader_ml import RoboTraderML
+from src.robo_trader_index import RoboTraderIndex
 from src.trainig import Train
 
 import src.utils as utils
@@ -18,16 +19,24 @@ class BatchRoboTrader:
   def __init__(self,
                verbose,
                start_date,
+               prediction_mode,
                log_level):
 
     # Boolean arguments
     self._verbose = verbose
     # Single arguments
     self._start_date = start_date
+    self._prediction_mode = prediction_mode
     self._log_level = log_level
     # Private arguments
     self._all_data_list = {}
-    self._top_params = utils.get_best_parameters()
+    self._top_params = None
+    if self._prediction_mode == "ml":
+      self._top_params = utils.get_best_parameters_ml()
+    
+    self._symbol_interval = []
+    if self._prediction_mode == "index":
+      self._symbol_interval = utils.get_symbol_interval_list()
 
     # Initialize logging
     self.log = self._configure_log(log_level)
@@ -52,109 +61,177 @@ class BatchRoboTrader:
     return logger
 
   def _data_collection(self):
-    for param in self._top_params:
-      try:         
-        ix_symbol = f'{param["symbol"]}_{param["interval"]}'
-        if ix_symbol not in self._all_data_list:
-          self.log.info(f'Loading data to memory for symbol: {ix_symbol}...')
-          self._all_data_list[ix_symbol] = utils.get_data(
-              symbol=f'{param["symbol"]}',
-              save_database=False,
-              interval=param['interval'],
-              tail=-1,
-              columns=myenv.all_cols,
-              parse_dates=True,
-              updata_data_from_web=False,
-              start_date=self._start_date)
-        self._all_data_list[ix_symbol] = self._all_data_list[ix_symbol].tail(1000)
-        self.log.info(f'Loaded data to memory for symbol: {ix_symbol}')
-      except Exception as e:
-        self.log.error(e)
+    if self._prediction_mode == "ml":
+      for param in self._top_params:
+        try:         
+          ix_symbol = f'{param["symbol"]}_{param["interval"]}'
+          if ix_symbol not in self._all_data_list:
+            self.log.info(f'PredictionMode: {self._prediction_mode} - Loading data to memory for symbol: {ix_symbol}...')
+            self._all_data_list[ix_symbol] = utils.get_data(
+                symbol=f'{param["symbol"]}',
+                save_database=False,
+                interval=param['interval'],
+                tail=-1,
+                columns=myenv.all_cols,
+                parse_dates=True,
+                updata_data_from_web=False,
+                start_date=self._start_date)
+          self._all_data_list[ix_symbol] = self._all_data_list[ix_symbol].tail(1000)
+          self.log.info(f'Loaded data to memory for symbol: {ix_symbol}')
+        except Exception as e:
+          self.log.error(e)
+    elif self._prediction_mode == "index":
+      for symbol, interval in self._symbol_interval:
+        try:         
+          ix_symbol = f'{symbol}_{interval}'
+          if ix_symbol not in self._all_data_list:
+            self.log.info(f'PredictionMode: {self._prediction_mode} - Loading data to memory for symbol: {ix_symbol}...')
+            self._all_data_list[ix_symbol] = utils.get_data(
+                symbol=symbol,
+                save_database=False,
+                interval=interval,
+                tail=1000,
+                columns=myenv.all_cols,
+                parse_dates=True,
+                updata_data_from_web=True,
+                start_date=self._start_date)
+          self.log.info(f'Loaded data to memory for symbol: {ix_symbol}')
+        except Exception as e:
+          self.log.error(e)
 
   def _data_preprocessing(self):
     self.log.info('Prepare All Data...')
-    for param in self._top_params:
-      ix_symbol = f'{param["symbol"]}_{param["interval"]}'
-      try:
-        self.log.info(f'Calculating EMA\'s for key {ix_symbol}...')
-        self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
-        self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
-        self._all_data_list[ix_symbol].info() if self._verbose else None
+    if self._prediction_mode == "ml":
+      for param in self._top_params:
+        ix_symbol = f'{param["symbol"]}_{param["interval"]}'
+        try:
+          self.log.info(f'PredictionMode: {self._prediction_mode} - Calculating EMA\'s for key {ix_symbol}...')
+          self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[int(param['times_regression_profit_and_loss']), 200])
+          self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
+          self._all_data_list[ix_symbol].info() if self._verbose else None
 
-        self.log.info(f'Calc RSI for symbol: {ix_symbol}')
-        self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
-        self._all_data_list[ix_symbol].dropna(inplace=True)
-        self._all_data_list[ix_symbol].info() if self._verbose else None
+          self.log.info(f'PredictionMode: {self._prediction_mode} - Calc RSI for symbol: {ix_symbol}')
+          self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
+          self._all_data_list[ix_symbol].dropna(inplace=True)
+          self._all_data_list[ix_symbol].info() if self._verbose else None
 
-      except Exception as e:
-        self.log.error(e)
+        except Exception as e:
+          self.log.error(e)
+    elif self._prediction_mode == "index":
+      for symbol, interval in self._symbol_interval:
+        try:         
+          ix_symbol = f'{symbol}_{interval}'
+          if ix_symbol not in self._all_data_list:
+            self.log.info(f'PredictionMode: {self._prediction_mode} - Calculating EMA\'s for key {ix_symbol}...')
+            self._all_data_list[ix_symbol] = calc_utils.calc_ema_periods(self._all_data_list[ix_symbol], periods_of_time=[200])
+            self.log.info(f'info after calculating EMA\'s: ') if self._verbose else None
+            self._all_data_list[ix_symbol].info() if self._verbose else None
 
+            self.log.info(f'PredictionMode: {self._prediction_mode} - Calc RSI for symbol: {ix_symbol}')
+            self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
+            self._all_data_list[ix_symbol].dropna(inplace=True)
+            self._all_data_list[ix_symbol].info() if self._verbose else None
+
+        except Exception as e:
+          self.log.error(e)
   # Public methods
+
+  def run_robo_trader_ml(self):
+      self.log.info(f'{self.__class__.__name__}: PredictionMode: {self._prediction_mode} - Start Running...')
+      robo_trader_params_list = {}
+      for params in self._top_params:     
+        model_name = utils.get_model_name_to_load(params['strategy'], params['symbol'], params['interval'], params['estimator'], params['stop_loss'],
+            params['regression_times'], params['times_regression_profit_and_loss'])
+        if model_name is None:
+          continue
+
+        ix_symbol = f'{params["symbol"]}_{params["interval"]}'        
+
+        params['all_data'] = self._all_data_list[ix_symbol]
+        params['start_date'] = self._start_date
+        params['calc_rsi'] = '-calc-rsi' in params['arguments']
+        params['verbose'] = self._verbose
+        params['arguments'] = params['arguments']
+        params['log_level'] = self._log_level      
+
+        strategy = params['strategy']
+        if ix_symbol not in robo_trader_params_list:
+          robo_trader_params_list[ix_symbol] = {}
+          robo_trader_params_list[ix_symbol]['symbol'] = params['symbol']
+          robo_trader_params_list[ix_symbol]['interval'] = params['interval']
+          robo_trader_params_list[ix_symbol]['mutex'] = mutex
+        
+        robo_trader_params_list[ix_symbol][strategy] = params
+        '''
+        model_name = utils.get_model_name_to_load(params['strategy'], params['symbol'], params['interval'], params['estimator'], params['stop_loss'],
+            params['regression_times'], params['times_regression_profit_and_loss'])
+        if model_name is None:
+          raise Exception(f'Best model not found: {model_name}')
+        '''
+
+      self.log.info(f'Total Robo Trades to start...: {len(robo_trader_params_list)}')
+      thread_list = []
+      for ix_symbol in robo_trader_params_list:
+        self.log.info(f'Starting Robo Trader for Symbol: {ix_symbol}')
+        robo = RoboTraderML(robo_trader_params_list[ix_symbol])
+        thread = threading.Thread(target=robo.run, name=ix_symbol)
+        thread.start()
+        thread_list.append(thread)
+
+      '''
+      # Monitoring Thread Live
+      self.log.info(f'Starting Thread Monitoring...')
+      while True:
+        for thread in thread_list:
+          self.log.info(f'Thread name: {thread.name} - status: {thread.is_alive()}')
+          if not thread.is_alive():
+            thread_name = thread.name
+            self.log.info(f'Removing dead thread name: {thread_name}')
+            thread_list.remove(thread)
+            for ix_symbol in robo_trader_params_list:
+              params = robo_trader_params_list[ix_symbol]
+              if f'{params["symbol"]}_{params["interval"]}' == thread_name:
+                self.log.info(f'Starting new thread for symbol: {thread_name}')
+                robo = RoboTraderML(params)
+                new_thread = threading.Thread(target=robo.run, name=ix_symbol)
+                new_thread.start()
+                thread_list.append(new_thread)
+        # End Thread Validation
+        time.sleep(60)
+      # End While  
+      '''
+
+  def run_robo_trader_index(self):
+      self.log.info(f'{self.__class__.__name__}: PredictionMode: {self._prediction_mode} - Start Running...')      
+      self.log.info(f'Symbol_interval: {self._symbol_interval}')
+      # thread_list = []
+      for symbol, interval in self._symbol_interval:
+        ix_symbol = f'{symbol}_{interval}'
+        params = {}
+        params['symbol'] = symbol
+        params['interval'] = interval
+        params['all_data'] = self._all_data_list[ix_symbol]
+        params['start_date'] = self._start_date
+        params['calc_rsi'] = True
+        params['verbose'] = self._verbose
+        params['stop_loss'] = myenv.stop_loss
+        #params['arguments'] = params['arguments']
+        params['log_level'] = self._log_level     
+        params['mutex'] = mutex
+
+        self.log.info(f'Total Robo Trades to start...: {len(params)}')
+        self.log.info(f'Starting Robo Trader for Symbol: {ix_symbol}')
+        robo = RoboTraderIndex(params)
+        thread = threading.Thread(target=robo.run, name=ix_symbol)
+        thread.start()
+        # thread_list.append(thread)
 
   def run(self):
     self.log.info(f'{self.__class__.__name__}: Start _data_collection...')
     self._data_collection()
     self.log.info(f'{self.__class__.__name__}: Start _data_preprocessing...')
     self._data_preprocessing()
-
-    self.log.info(f'{self.__class__.__name__}: Start Running...')
-    robo_trader_params_list = {}
-    for params in self._top_params:     
-      model_name = utils.get_model_name_to_load(params['strategy'], params['symbol'], params['interval'], params['estimator'], params['stop_loss'],
-          params['regression_times'], params['times_regression_profit_and_loss'])
-      if model_name is None:
-        continue
-
-      ix_symbol = f'{params["symbol"]}_{params["interval"]}'        
-
-      params['all_data'] = self._all_data_list[ix_symbol]
-      params['start_date'] = self._start_date
-      params['calc_rsi'] = '-calc-rsi' in params['arguments']
-      params['verbose'] = self._verbose
-      params['arguments'] = params['arguments']
-      params['log_level'] = self._log_level      
-
-      strategy = params['strategy']
-      if ix_symbol not in robo_trader_params_list:
-        robo_trader_params_list[ix_symbol] = {}
-        robo_trader_params_list[ix_symbol]['symbol'] = params['symbol']
-        robo_trader_params_list[ix_symbol]['interval'] = params['interval']
-        robo_trader_params_list[ix_symbol]['mutex'] = mutex
-      
-      robo_trader_params_list[ix_symbol][strategy] = params
-      '''
-      model_name = utils.get_model_name_to_load(params['strategy'], params['symbol'], params['interval'], params['estimator'], params['stop_loss'],
-          params['regression_times'], params['times_regression_profit_and_loss'])
-      if model_name is None:
-        raise Exception(f'Best model not found: {model_name}')
-      '''
-
-    self.log.info(f'Total Robo Trades to start...: {len(robo_trader_params_list)}')
-    thread_list = []
-    for ix_symbol in robo_trader_params_list:
-      self.log.info(f'Starting Robo Trader for Symbol: {ix_symbol}')
-      robo = RoboTrader(robo_trader_params_list[ix_symbol])
-      thread = threading.Thread(target=robo.run, name=ix_symbol)
-      thread.start()
-      thread_list.append(thread)
-
-    # Monitoring Thread Live
-    self.log.info(f'Starting Thread Monitoring...')
-    while True:
-      for thread in thread_list:
-        self.log.info(f'Thread name: {thread.name} - status: {thread.is_alive()}')
-        if not thread.is_alive():
-          thread_name = thread.name
-          self.log.info(f'Removing dead thread name: {thread_name}')
-          thread_list.remove(thread)
-          for ix_symbol in robo_trader_params_list:
-            params = robo_trader_params_list[ix_symbol]
-            if f'{params["symbol"]}_{params["interval"]}' == thread_name:
-              self.log.info(f'Starting new thread for symbol: {thread_name}')
-              robo = RoboTrader(params)
-              new_thread = threading.Thread(target=robo.run, name=ix_symbol)
-              new_thread.start()
-              thread_list.append(new_thread)
-      # End Thread Validation
-      time.sleep(60)
-    # End While
+    if self._prediction_mode == "ml":
+      self.run_robo_trader_ml()
+    elif self._prediction_mode == "index":
+      self.run_robo_trader_index()

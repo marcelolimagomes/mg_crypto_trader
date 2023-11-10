@@ -11,6 +11,7 @@ def main(args):
   # Single arguments
   start_date = '2023-01-01'
   log_level = logging.INFO
+  prediction_mode = "ml"
 
   for arg in args:
     # Boolean arguments
@@ -33,9 +34,13 @@ def main(args):
     if (arg.startswith('-log-level=ERROR')):
       log_level = logging.ERROR
 
+    if (arg.startswith('-prediction-mode=')):
+      prediction_mode = arg.split('=')[1]
+
   brt = BatchRoboTrader(
       verbose,
       start_date,
+      prediction_mode,
       log_level)
   brt.run()
 

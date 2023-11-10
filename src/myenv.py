@@ -1,5 +1,7 @@
 import sys
 
+interval_list = ['1m', '5m', '15m', '30m', '1h']
+
 float_kline_cols = ['open', 'high', 'low', 'close', 'volume', 'quote_asset_volume', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume']
 
 integer_kline_cols = ['number_of_trades', 'ignore']
@@ -27,7 +29,7 @@ main_log_filename = 'main_process_trader.log'
 robo_log_filename = 'robo.log'
 modeldir = sys.path[0] + '/src/models'
 label = 'status'
-stop_loss = 2.0
+stop_loss = 1.0
 regression_times = 24 * 30 * 2  # horas
 times_regression_profit_and_loss = 24
 n_jobs = -1
@@ -47,3 +49,6 @@ sleep_refresh = 5  # seconds
 producao = True
 
 telegram_key = []
+
+min_rsi = 30.0
+max_rsi = 70.0

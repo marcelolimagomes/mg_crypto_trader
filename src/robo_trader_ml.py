@@ -13,7 +13,7 @@ import os
 import logging
 
 
-class RoboTrader():
+class RoboTraderML():
   def __init__(self, params: dict):
     #print('ROBO TRADER >>>>>>> ', params)
     self._params = params
