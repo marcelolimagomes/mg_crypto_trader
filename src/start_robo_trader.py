@@ -1,12 +1,12 @@
 import sys
 from src.batch_robo_trader import BatchRoboTrader
 from src.utils import *
-from src.train import *
 
 
 def main(args):
   # Boolean arguments
   verbose = False
+  update_data_from_web = False
 
   # Single arguments
   start_date = '2023-01-01'
@@ -17,6 +17,9 @@ def main(args):
     # Boolean arguments
     if (arg.startswith('-verbose')):
       verbose = True
+
+    if (arg.startswith('-update-data-from-web')):
+      update_data_from_web = True
 
     # Single arguments
     if (arg.startswith('-start-date=')):
@@ -41,6 +44,7 @@ def main(args):
       verbose,
       start_date,
       prediction_mode,
+      update_data_from_web,
       log_level)
   brt.run()
 

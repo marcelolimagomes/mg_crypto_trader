@@ -1,5 +1,5 @@
 from src.utils import *
-from src.train import *
+from train_ml import *
 from src.calcEMA import calc_RSI
 
 import src.myenv as myenv

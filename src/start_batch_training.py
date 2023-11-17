@@ -1,15 +1,13 @@
-
-import sys
 from src.train_best_model import TrainBestModel
-from src.batch_training import BatchTrain
+from src.batch_train_ml import BatchTrainML
+from src.batch_train_index import BatchTrainIndex
 from src.utils import *
-from src.train import *
-from src.calcEMA import calc_RSI
 
 import src.myenv as myenv
-import src.send_message as sm
 
+import datetime
 import logging
+import sys
 
 logger = None
 
@@ -61,11 +59,16 @@ def main(args):
   interval_list = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
   estimator_list = ['lr', 'lasso', 'ridge', 'en', 'lar', 'llar', 'omp', 'br', 'ard', 'par', 'ransac', 'tr',
                     'huber', 'kr', 'svm', 'knn', 'dt', 'rf', 'et', 'ada', 'gbr', 'mlp', 'xgboost', 'lightgbm', 'catboost']
-  stop_loss_list = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+  target_margin_list = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
   numeric_features_list = prepare_numeric_features_list(myenv.data_numeric_fields)
   times_regression_PnL_list = [6, 12, 24]
   regression_times_list = [24, 360, 720]
   regression_features_list = combine_list(myenv.data_numeric_fields)
+  prediction_mode = 'ml'
+
+  range_min_rsi = 30
+  range_max_rsi = 70
+  range_p_ema = [50, 250]
 
   for arg in args:
     # Boolean arguments
@@ -97,6 +100,7 @@ def main(args):
     # Single arguments
     if (arg.startswith('-start-train-date=')):
       start_train_date = arg.split('=')[1]
+
     if (arg.startswith('-start-test-date=')):
       start_test_date = arg.split('=')[1]
 
@@ -121,6 +125,15 @@ def main(args):
     if (arg.startswith('-log-level=ERROR')):
       log_level = logging.ERROR
 
+    if (arg.startswith('-prediction-mode=')):
+      prediction_mode = arg.split('=')[1]
+
+    if (arg.startswith('-range-min-rsi=')):
+      range_min_rsi = int(arg.split('=')[1])
+
+    if (arg.startswith('-range-max-rsi=')):
+      range_max_rsi = int(arg.split('=')[1])
+
     # List arguments
     if (arg.startswith('-symbol-list=')):
       aux = arg.split('=')[1]
@@ -134,13 +147,13 @@ def main(args):
       aux = arg.split('=')[1]
       estimator_list = aux.split(',')
 
-    if (arg.startswith('-stop-loss-list=')):
+    if (arg.startswith('-target-margin-list=')):
       aux = arg.split('=')[1]
-      stop_loss_list = aux.split(',')
+      target_margin_list = aux.split(',')
 
     if (arg.startswith('-numeric-features=')):
       aux = arg.split('=')[1]
-      aux += 'ema_XXXp,ema_200p' if aux == '' else ',ema_XXXp,ema_200p'      
+      aux += 'ema_XXXp,ema_200p' if aux == '' else ',ema_XXXp,ema_200p'
       if ('-calc-rsi' in args) and ('rsi' not in aux):
         aux += ',rsi'
       if combine_features:
@@ -163,6 +176,10 @@ def main(args):
       else:
         regression_features_list = [aux]
 
+    if (arg.startswith('-range-p-ema=')):
+      aux = arg.split('=')[1]
+      range_p_ema = aux.split(',')
+
   logger = configure_log(log_level)
 
   if '-train-best-model' in args:
@@ -176,33 +193,49 @@ def main(args):
     download_data(save_database=True, parse_dates=False)
     logger.info('start_batch_training: Database updated...')
 
-  bt = BatchTrain(
-      update_data_from_web,
-      calc_rsi,
-      use_gpu,
-      normalize,
-      verbose,
-      use_all_data_to_train,
-      revert,
-      no_tune,
-      feature_selection,
-      combine_features,
-      save_model,
-      start_train_date,
-      start_test_date,
-      fold,
-      n_jobs,
-      n_threads,
-      log_level,
-      symbol_list,
-      interval_list,
-      estimator_list,
-      stop_loss_list,
-      numeric_features_list,
-      times_regression_PnL_list,
-      regression_times_list,
-      regression_features_list)
-  bt.run()
+  if prediction_mode == 'ml':
+    bt = BatchTrainML(
+        update_data_from_web,
+        calc_rsi,
+        use_gpu,
+        normalize,
+        verbose,
+        use_all_data_to_train,
+        revert,
+        no_tune,
+        feature_selection,
+        combine_features,
+        save_model,
+        start_train_date,
+        start_test_date,
+        fold,
+        n_jobs,
+        n_threads,
+        log_level,
+        symbol_list,
+        interval_list,
+        estimator_list,
+        target_margin_list,
+        numeric_features_list,
+        times_regression_PnL_list,
+        regression_times_list,
+        regression_features_list)
+    bt.run()
+  elif prediction_mode == 'index':
+    bt = BatchTrainIndex(
+        update_data_from_web,
+        calc_rsi,
+        verbose,
+        log_level,
+        symbol_list,
+        interval_list,
+        target_margin_list,
+        range_min_rsi,
+        range_max_rsi,
+        range_p_ema)
+    bt.run()
+  else:
+    raise ValueError(f'Invalid prediction mode: {prediction_mode}')
 
 
 if __name__ == '__main__':

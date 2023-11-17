@@ -12,9 +12,10 @@ import src.calcEMA as calc_utils
 import os
 import logging
 
+
 class RoboTraderIndex():
   def __init__(self, params: dict):
-    #print('ROBO TRADER >>>>>>> ', params)
+    # print('ROBO TRADER >>>>>>> ', params)
     self._params = params
     self._all_data = {}
     self._all_data = params['all_data'].copy()
@@ -26,8 +27,12 @@ class RoboTraderIndex():
 
     # List arguments
     self._start_date = params['start_date']
-    self._stop_loss = float(params['stop_loss'])
-    
+    self._target_margin = float(params['target_margin'])
+    self._stop_loss_multiplier = int(params['stop_loss_multiplier'])
+    self._p_ema = int(params['p_ema'])
+    self._min_rsi = int(params['min_rsi'])
+    self._max_rsi = int(params['max_rsi'])
+
     # Boolean arguments
     self._calc_rsi = params['calc_rsi']
     self._verbose = params['verbose']
@@ -113,15 +118,15 @@ class RoboTraderIndex():
 
   def is_short(self, strategy):
     return strategy.startswith('CAI')
-  
+
   def _data_preprocessing(self):
     return
 
   def _feature_engineering(self):
     return
-  
+
   def update_data_from_web(self):
-    #self._kline_features
+    # self._kline_features
     df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=myenv.all_klines_cols, parse_dates=True)
 
     self.log.debug(f'df_klines shape: {df_klines.shape}')
@@ -142,49 +147,19 @@ class RoboTraderIndex():
     self.log.debug(f'Calculating EMA\'s for key {self._symbol}_{self._interval}...')
 
     rsi = 0.0
-    ema_200p = 0.0
-    self.log.debug(f'Start Calculating ema_200p and RSI...')
-    self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[200])
+    p_ema_value = 0.0
+    p_ema_label = f'ema_{self._p_ema}p'
+    self.log.debug(f'Start Calculating {p_ema_label} and RSI...')
+    self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[self._p_ema])
     self._all_data = calc_utils.calc_RSI(self._all_data)
-    self.log.debug(f'After Calculating ema_200p and RSI - all_data.shape: {self._all_data.shape}')
+    self.log.debug(f'After Calculating {p_ema_label} and RSI - all_data.shape: {self._all_data.shape}')
 
     rsi = self._all_data.tail(1)['rsi'].values[0]
-    ema_200p = self._all_data.tail(1)['ema_200p'].values[0]
+    p_ema_value = self._all_data.tail(1)[p_ema_label].values[0]
 
-    return rsi, ema_200p
-
-  def calc_take_profit_stop_loss(self, strategy, actual_value, margin):
-    take_profit_value = 0.0
-    stop_loss_value = 0.0
-    if strategy.startswith('CAI'):  # Short
-      take_profit_value = actual_value * (1 - margin / 100)
-      stop_loss_value = actual_value * (1 + (margin * myenv.stop_loss_multiplier) / 100)
-    elif strategy.startswith('SOBE'):  # Long
-      take_profit_value = actual_value * (1 + margin / 100)
-      stop_loss_value = actual_value * (1 - (margin * myenv.stop_loss_multiplier) / 100)
-    return take_profit_value, stop_loss_value
-
-  def predict_strategy(self):
-    result_strategy, target_margin = 'ESTAVEL', 0.0
-    self.log.debug(f'Start Predicting Strategy')
-
-    price = self._all_data['close'].tail(1).values[0]
-    rsi = self._all_data['rsi'].tail(1).values[0]
-    ema_200 = self._all_data['ema_200p'].tail(1).values[0]
-
-    if price > ema_200 and rsi >= myenv.max_rsi:
-      result_strategy = 'CAI'
-      target_margin = myenv.stop_loss
-
-    if price < ema_200 and rsi <= myenv.min_rsi:
-      result_strategy = 'SOBE'
-      target_margin = myenv.stop_loss
-
-    return result_strategy, target_margin
+    return rsi, p_ema_value
 
   def run(self):
-    #self.log.info(f'Columns CAI: {self._kline_features["CAI"]}')
-
     self.log.info(f'Start _data_preprocessing...')
     self._data_preprocessing()
     self.log.info(f'Start _feature_engineering...')
@@ -205,6 +180,7 @@ class RoboTraderIndex():
     target_margin = 0.0
     rsi = 0.0
     latest_closed_candle_open_time_aux = None
+    p_ema_label = f'ema_{self._p_ema}p'
 
     balance = utils.get_account_balance()
 
@@ -232,15 +208,14 @@ class RoboTraderIndex():
         # Apply predict only on time per interval
         if (not purchased) and (balance > 0):
           latest_closed_candle_open_time_aux = latest_closed_candle_open_time
-
-          rsi, ema_200p = self.feature_engineering_on_loop()
-          strategy, target_margin = self.predict_strategy()
-          self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - ema_200p: {ema_200p:.2f}')
-
+          rsi, p_ema_value = self.feature_engineering_on_loop()
+          target_margin = self._target_margin
+          strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)
+          self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - {p_ema_label}: {p_ema_value:.2f}')
           if self.validate_short_or_long(strategy):  # If true, BUY
             purchased = True
             purchase_price = actual_price
-            take_profit, stop_loss = self.calc_take_profit_stop_loss(strategy, purchase_price, target_margin)
+            take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, purchase_price, target_margin, self._stop_loss_multiplier)
 
             # Lock Thread to register BUY
             self._mutex.acquire()
@@ -287,6 +262,10 @@ class RoboTraderIndex():
 
             self.log_selling(latest_closed_candle_open_time, strategy, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
                              take_profit, stop_loss, target_margin, rsi)
+
+            if profit_and_loss < 0:
+              time.sleep(60 * 60)  # if pnl is negative, sleep 1h
+
             # Reset variables
             purchased, purchase_price, amount_invested, take_profit, stop_loss, profit_and_loss, margin_operation, target_margin = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       except Exception as e:

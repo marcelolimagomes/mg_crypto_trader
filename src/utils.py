@@ -21,22 +21,38 @@ from datetime import datetime, timedelta
 import threading
 
 from sqlalchemy import desc
-from sqlalchemy.sql import functions 
+from sqlalchemy.sql import functions
 from sqlalchemy.orm import Session
 
 import numpy as np
 
 log = logging.getLogger()
 
+
 def get_ix_symbol(symbol, interval, stop_loss, times_regression_profit_and_loss):
   return f'{symbol}_{interval}_SL_{stop_loss}_PnL_{times_regression_profit_and_loss}'
+
+
+def truncate_data_in_days(data, days):
+  min_date = data['open_time'].min()
+  max_date = data['open_time'].max()
+  log.info(f'Data Loaded: Min date: {min_date} - Max date: {max_date}')
+  validate_start_data = max_date - np.timedelta64(days, 'D')
+  data = data[data['open_time'] >= validate_start_data]
+
+  min_date = data['open_time'].min()
+  max_date = data['open_time'].max()
+  log.info(f'All Data Filtered: Min Date: {min_date} - Max_date: {max_date} - Shape: {data.shape}')
+
+  return data
+
 
 def truncate_data_to_train(data):
   min_date = data['open_time'].min()
   max_date = data['open_time'].max()
   log.info(f'Data Loaded: Min date: {min_date} - Max date: {max_date}')
   validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')
-  
+
   log.info(f'Filtering all data: days_to_validate_train_data: {myenv.days_to_validate_train} days')
   min_index = data[data['open_time'] < validate_start_data].tail(myenv.rows_to_train).index.min()
   real_rows_to_train = data[data['open_time'] < validate_start_data].tail(myenv.rows_to_train).shape[0]
@@ -49,10 +65,11 @@ def truncate_data_to_train(data):
   log.info(f'rows_to_train: {real_rows_to_train} - rows_to_validate: {real_rols_to_validate} - All Data Shape: {data.shape[0]}')
   return data
 
-def split_train_test_data(data):  
+
+def split_train_test_data(data):
   log.info(f'Prepare Train Data...')
   max_date = data['open_time'].max()
-  validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')      
+  validate_start_data = max_date - np.timedelta64(myenv.days_to_validate_train, 'D')
   max_index = data[data['open_time'] < validate_start_data].index.max()
 
   _train_data = data[data.index <= max_index]
@@ -136,6 +153,7 @@ def get_amount_to_invest(register=True):
 
   return amount_invested, balance
 
+
 def get_sum_pnl():
   session = Session(models.engine)
   result = session.query(functions.sum(models.Ledger.pnl)).scalar()
@@ -196,6 +214,8 @@ def prepare_best_params():
   file_list = glob.glob(os.path.join(f'{myenv.datadir}/', 'resultado_simulacao_*.csv'))
   df_top_params = pd.DataFrame()
   for file_path in file_list:
+    if '_index_' in file_path:
+      continue
     if os.path.isfile(file_path):
       df = pd.read_csv(file_path, sep=';')
     df['count_numeric_features'] = df['numeric_features'].apply(lambda x: len(x.split(',')))
@@ -221,6 +241,27 @@ def prepare_best_params():
   return top_params
 
 
+def prepare_best_params_index():
+  file_list = glob.glob(os.path.join(f'{myenv.datadir}/', 'resultado_simulacao_index_*.csv'))
+  df_top_params = pd.DataFrame()
+  for file_path in file_list:
+    if os.path.isfile(file_path):
+      df = pd.read_csv(file_path, sep=';')
+
+    df.sort_values(['pnl'], ascending=True, inplace=True)
+    df_aux = df.tail(1)
+    if df_aux['pnl'].values[0] > 150.0:
+      df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+
+  df_top_params.sort_values(['symbol', 'interval'], inplace=True)
+  top_paramers_filename = f'{myenv.datadir}/top_params_index.csv'
+  log.info(f'Top Parameters Index save to: {top_paramers_filename}')
+  df_top_params.to_csv(top_paramers_filename, sep=';', index=False)
+  top_params = df_top_params.to_dict(orient='records')
+  log.info(f'Top Params Index: \n{top_params}')
+  return top_params
+
+
 def get_best_parameters():
   top_parameters_filename = f'{myenv.datadir}/top_params.csv'
   if not os.path.isfile(top_parameters_filename):
@@ -232,12 +273,24 @@ def get_best_parameters():
   return top_params
 
 
+def get_best_parameters_index():
+  top_parameters_filename = f'{myenv.datadir}/top_params_index.csv'
+  if not os.path.isfile(top_parameters_filename):
+    raise Exception(f'Top Parameters Index not found: {top_parameters_filename}')
+
+  df_top_params = pd.read_csv(top_parameters_filename, sep=';')
+  top_params = df_top_params.to_dict(orient='records')
+  log.info(f'Top Parameters Index Loaded. Items: {len(top_params)}')
+  return top_params
+
+
 def get_symbol_list():
   result = []
   df = pd.read_csv(myenv.datadir + '/symbol_list.csv')
   for symbol in df['symbol']:
     result.append(symbol)
   return result
+
 
 def get_symbol_interval_list():
   symbol_list = get_symbol_list()
@@ -750,10 +803,10 @@ def get_database_name(symbol, interval):
   return f'{myenv.datadir}/{symbol}/{symbol}_{interval}.dat'
 
 
-def download_data(save_database=True, parse_dates=False, interval='1h', start_date='2010-01-01'):
+def download_data(save_database=True, parse_dates=False, interval='1h', tail=-1, start_date='2010-01-01'):
   symbols = pd.read_csv(myenv.datadir + '/symbol_list.csv')
   for symbol in symbols['symbol']:
-    get_data(symbol=symbol, save_database=save_database, interval=interval, columns=myenv.all_klines_cols, parse_dates=parse_dates, start_date=start_date)
+    get_data(symbol=symbol, save_database=save_database, interval=interval, tail=tail, columns=myenv.all_klines_cols, parse_dates=parse_dates, start_date=start_date)
 
 
 def adjust_index(df):
@@ -762,6 +815,7 @@ def adjust_index(df):
   df.index.name = 'ix_open_time'
   df.sort_index(inplace=True)
   return df
+
 
 def remove_cols_for_klines(columns):
   cols_to_remove = ['symbol', 'rsi']
@@ -772,7 +826,7 @@ def remove_cols_for_klines(columns):
     if col in columns:
       columns.remove(col)
   return columns
-  
+
 
 def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
   # return pd.DataFrame()
@@ -801,12 +855,11 @@ def parse_type_fields(df, parse_dates=False):
       if col in df.columns:
         if df[col].isna().sum() == 0:
           df[col] = df[col].astype('float32')
-    
+
     for col in myenv.float_kline_cols:
       if col in df.columns:
         if df[col].isna().sum() == 0:
           df[col] = df[col].astype('float32')
-
 
     for col in myenv.integer_kline_cols:
       if col in df.columns:
@@ -1034,6 +1087,7 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
 
 
 def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, value: float, stop_loss=3.0, revert=False):
+  ## ******* FOR ML ******** ##
   _data = df_predicted.copy()
   _data.index = _data['open_time']
   _data = _data[(_data.index >= start_date) & (_data.index <= end_date)]
@@ -1082,6 +1136,74 @@ def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, valu
   return saldo
 
 
+def calc_take_profit_stop_loss(strategy, actual_value, margin, stop_loss_multiplier=myenv.stop_loss_multiplier):
+  take_profit_value = 0.0
+  stop_loss_value = 0.0
+  if strategy.startswith('CAI'):  # Short
+    take_profit_value = actual_value * (1 - margin / 100)
+    stop_loss_value = actual_value * (1 + (margin * stop_loss_multiplier) / 100)
+  elif strategy.startswith('SOBE'):  # Long
+    take_profit_value = actual_value * (1 + margin / 100)
+    stop_loss_value = actual_value * (1 - (margin * stop_loss_multiplier) / 100)
+  return take_profit_value, stop_loss_value
+
+
+def simule_index_trading(_data: pd.DataFrame, symbol, interval, p_ema: int, start_amount_invested=100, target_margin=myenv.stop_loss, min_rsi=myenv.min_rsi, max_rsi=myenv.max_rsi, stop_loss_multiplier=myenv.stop_loss_multiplier):
+  purchased = False
+  perform_sell = False
+  purchase_price = 0.0
+  purchase_strategy = ''
+  log.info(f'Start Simule Trading: {symbol}_{interval} - Shape: {_data.shape} - Amount Invested: {start_amount_invested:.2f} - Target Margin: {target_margin}% - EMA: {p_ema}p - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}')
+
+  for _, row in _data.iterrows():
+    actual_price = row['close']
+    rsi = row['rsi']
+    p_ema_value = row[f'ema_{p_ema}p']
+    open_time = row['open_time']
+    # strategy = row['strategy']
+    # take_profit = row['take_profit']
+    # stop_loss = row['stop_loss']
+
+    if isinstance(open_time, np.datetime64):
+      _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
+    else:
+      _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
+
+    if not purchased:
+      strategy = predict_strategy_index(row, p_ema, max_rsi, min_rsi)
+      # log.debug(f'[{row_nu}][{strategy}] => Purchased: {purchased} - Price: {actual_price:.6f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi} - Max RSI: {max_rsi}')
+      if strategy.startswith('SOBE') or strategy.startswith('CAI'):  # If true, BUY
+        purchased = True
+        purchase_price = actual_price
+        purchase_strategy = strategy
+        take_profit, stop_loss = calc_take_profit_stop_loss(strategy, purchase_price, target_margin, stop_loss_multiplier)
+        log.debug(f'BUY[{_open_time}]: {purchase_strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - Take Profit: \
+{take_profit:.2f} - Stop Loss: {stop_loss:.2f} - RSI: {rsi:.2f}% - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}')
+        continue
+
+    if purchased:  # and (operation.startswith('SOBE') or operation.startswith('CAI')):
+      # log.debug(f'[{row_nu}][{strategy}] => Purchased: {purchased} - Price: {actual_price:.6f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi} - Max RSI: {max_rsi}')
+      if purchase_strategy.startswith('SOBE'):
+        margin_operation = (actual_price - purchase_price) / purchase_price
+        if ((actual_price >= take_profit) or (actual_price <= stop_loss)):  # Long ==> Sell - Take Profit / Stop Loss
+          perform_sell = True
+      elif purchase_strategy.startswith('CAI'):
+        margin_operation = (purchase_price - actual_price) / purchase_price
+        if ((actual_price <= take_profit) or (actual_price >= stop_loss)):  # Short ==> Sell - Take Profit / Stop Loss
+          perform_sell = True
+
+      if perform_sell:
+        start_amount_invested = (1 + margin_operation) * start_amount_invested
+        log.debug(f'SELL[{_open_time}]: {purchase_strategy} - Price: {actual_price:.6f} - Purchase Price: {purchase_price:.6f} - Target Margin: {target_margin:.2f}% - Margin Operation:\
+{margin_operation*100:.2f}% - Take Profit: {take_profit:.2f} - Stop Loss: {stop_loss:.2f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Sum PnL: {start_amount_invested:.2f}  - Stop Loss Multiplier: {stop_loss_multiplier}')
+        perform_sell = False
+        purchase_strategy = ''
+        purchased = False
+  log.info(f'{symbol}_{interval} - Result Simule Trading: {start_amount_invested:.2f}')
+
+  return start_amount_invested
+
+
 def validate_score_test_data(exp, final_model, label, test_data, ajusted_test_data):
   log.info('start_train_engine: predicting final model...')
 
@@ -1099,6 +1221,103 @@ def validate_score_test_data(exp, final_model, label, test_data, ajusted_test_da
   return df_final_predict, res_score
 
 
+def get_index_results(symbol, interval):
+  df_resultado_simulacao = None
+  simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_index_{symbol}_{interval}.csv'
+  if (os.path.exists(simulation_results_filename)):
+    df_resultado_simulacao = pd.read_csv(simulation_results_filename, sep=';')
+  else:
+    df_resultado_simulacao = pd.DataFrame()
+  return df_resultado_simulacao
+
+
+def save_index_results(df_result_simulation, symbol, interval, target_margin, p_ema, min_rsi, max_rsi, amount_invested, pnl, stop_loss_multiplier, arguments, save_result=False):
+  if df_result_simulation is None:
+    df_result_simulation = get_index_results(symbol, interval)
+
+  result_simulation = {}
+  result_simulation['data'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  result_simulation['symbol'] = symbol
+  result_simulation['interval'] = interval
+  result_simulation['target_margin'] = float(target_margin)
+  result_simulation['p_ema'] = int(p_ema)
+  result_simulation['min_rsi'] = int(min_rsi)
+  result_simulation['max_rsi'] = int(max_rsi)
+  result_simulation['amount_invested'] = round(float(amount_invested), 2)
+  result_simulation['stop_loss_multiplier'] = int(stop_loss_multiplier)
+  result_simulation['pnl'] = round(float(pnl), 2)
+  result_simulation['arguments'] = arguments
+
+  new_df_result_simulation = pd.concat([df_result_simulation, pd.DataFrame([result_simulation])], ignore_index=True)
+
+  if save_result:
+    simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_index_{symbol}_{interval}.csv'
+    new_df_result_simulation.sort_values('pnl', inplace=True)
+    new_df_result_simulation.to_csv(simulation_results_filename, sep=';', index=False)
+
+  return new_df_result_simulation
+
+
+def _finalize_index_train(train_param, lock, df_result_simulation):
+  result = 'SUCESS'
+  try:
+    pnl = simule_index_trading(
+      train_param['all_data'],
+      train_param['symbol'],
+      train_param['interval'],
+      train_param['p_ema'],
+      myenv.default_amount_invested,
+      train_param['target_margin'],
+      train_param['range_min_rsi'],
+      train_param['range_max_rsi'],
+      train_param['stop_loss_multiplier'])
+
+    # Lock Thread to register results
+    ix_symbol = f'{train_param["symbol"]}_{train_param["interval"]}'
+
+    lock.acquire()
+    df_result_simulation[ix_symbol] = save_index_results(
+        df_result_simulation[ix_symbol],
+        train_param['symbol'],
+        train_param['interval'],
+        train_param['target_margin'],
+        train_param['p_ema'],
+        train_param['range_min_rsi'],
+        train_param['range_max_rsi'],
+        myenv.default_amount_invested,
+        pnl,
+        train_param['stop_loss_multiplier'],
+        train_param['arguments'],
+        False)
+    lock.release()
+  except Exception as e:
+    log.exception(e)
+    result = 'ERROR'
+  return result
+
+
+def only_save_index_results(df_result_simulation, symbol, interval):
+  simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_index_{symbol}_{interval}.csv'
+  df_result_simulation.sort_values('pnl', inplace=True)
+  df_result_simulation.to_csv(simulation_results_filename, sep=';', index=False)
+
+
+def has_index_results(df_result_simulation, symbol, interval, target_margin, p_ema, min_rsi, max_rsi, stop_loss_multiplier):
+  if df_result_simulation is None:
+    simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_index_{symbol}_{interval}.csv'
+    if (os.path.exists(simulation_results_filename)):
+      df_result_simulation = pd.read_csv(simulation_results_filename, sep=';')
+    else:
+      return False
+
+  if df_result_simulation is not None:
+    chave = (df_result_simulation['symbol'] == symbol) & (df_result_simulation['interval'] == interval) & (df_result_simulation['target_margin'] == float(target_margin)) & (df_result_simulation['p_ema'] == int(p_ema)) & \
+            (df_result_simulation['min_rsi'] == int(min_rsi)) & (df_result_simulation['max_rsi'] == int(max_rsi)) & (df_result_simulation['stop_loss_multiplier'] == int(stop_loss_multiplier))
+    return chave.sum() > 0
+  else:
+    return False
+
+
 def save_results(model_name,
                  symbol,
                  interval,
@@ -1113,8 +1332,8 @@ def save_results(model_name,
                  times_regression_profit_and_loss,
                  stop_loss,
                  fold,
-                 #start_value,
-                 #final_value,
+                 # start_value,
+                 # final_value,
                  use_all_data_to_train,
                  no_tune,
                  res_score,
@@ -1122,9 +1341,9 @@ def save_results(model_name,
 
   simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_{symbol}_{interval}.csv'
   if (os.path.exists(simulation_results_filename)):
-    df_resultado_simulacao = pd.read_csv(simulation_results_filename, sep=';')
+    df_result_simulation = pd.read_csv(simulation_results_filename, sep=';')
   else:
-    df_resultado_simulacao = pd.DataFrame()
+    df_result_simulation = pd.DataFrame()
 
   result_simulado = {}
   result_simulado['data'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1141,9 +1360,9 @@ def save_results(model_name,
       result_simulado[field] = round(res_score["_score"].values[i], 4)
     result_simulado['max_score'] = max(result_simulado['CAI'], result_simulado['SOBE'])
 
-  #result_simulado['profit_and_loss_value'] = round(final_value - start_value, 2)
-  #result_simulado['start_value'] = round(start_value, 2)
-  #result_simulado['final_value'] = round(final_value, 2)
+  # result_simulado['profit_and_loss_value'] = round(final_value - start_value, 2)
+  # result_simulado['start_value'] = round(start_value, 2)
+  # result_simulado['final_value'] = round(final_value, 2)
   result_simulado['numeric_features'] = numeric_features
   result_simulado['regression_features'] = regression_features
   result_simulado['train_size'] = train_size
@@ -1156,43 +1375,43 @@ def save_results(model_name,
   result_simulado['model_name'] = model_name
   result_simulado['arguments'] = arguments
 
-  df_resultado_simulacao = pd.concat([df_resultado_simulacao, pd.DataFrame([result_simulado])], ignore_index=True)
-  df_resultado_simulacao.sort_values('max_score', inplace=True)
+  new_df_result_simulation = pd.concat([df_result_simulation, pd.DataFrame([result_simulado])], ignore_index=True)
+  new_df_result_simulation.sort_values('max_score', inplace=True)
 
-  df_resultado_simulacao.to_csv(simulation_results_filename, sep=';', index=False)
+  new_df_result_simulation.to_csv(simulation_results_filename, sep=';', index=False)
+
 
 def has_results(symbol,
                 interval,
                 estimator,
-                imbalance_method,                 
+                imbalance_method,
                 numeric_features,
                 times_regression_profit_and_loss,
                 stop_loss):
-  
+
   log.debug(f'symbol={symbol},interval={interval},estimator={estimator},imbalance_method={imbalance_method},numeric_features={numeric_features}\
 ,times_regression_profit_and_loss={times_regression_profit_and_loss},stop_loss={stop_loss}')
-  
+
   log.debug(f'symbol={type(symbol)},interval={type(interval)},estimator={type(estimator)},imbalance_method={type(imbalance_method)}\
 ,numeric_features={type(numeric_features)},times_regression_profit_and_loss={type(times_regression_profit_and_loss)},stop_loss={type(stop_loss)}')
 
-
   simulation_results_filename = f'{myenv.datadir}/resultado_simulacao_{symbol}_{interval}.csv'
-  log.debug(f'simulation_results_filename: {simulation_results_filename}') 
+  log.debug(f'simulation_results_filename: {simulation_results_filename}')
   if not os.path.exists(simulation_results_filename):
     return False
 
-  df_resultado_simulacao = pd.read_csv(simulation_results_filename, sep=';')
-  #df_resultado_simulacao.info()
-  log.debug(f'df_resultado_simulacao.shape[0]: {df_resultado_simulacao.shape[0]}')
-  if df_resultado_simulacao.shape[0] > 0:
-    chave = (df_resultado_simulacao['symbol'] == symbol) & \
-        (df_resultado_simulacao['interval'] == interval) & \
-        (df_resultado_simulacao['estimator'] == estimator) & \
-        (df_resultado_simulacao['imbalance_method'] == imbalance_method) & \
-        (df_resultado_simulacao['stop_loss'] == float(stop_loss)) & \
-        (df_resultado_simulacao['times_regression_profit_and_loss'] == int(times_regression_profit_and_loss)) & \
-        (df_resultado_simulacao['numeric_features'] == numeric_features)
-#        (df_resultado_simulacao['regression_times'] == regression_times) & \    
+  df_result_simulation = pd.read_csv(simulation_results_filename, sep=';')
+  # df_resultado_simulacao.info()
+  log.debug(f'df_resultado_simulacao.shape[0]: {df_result_simulation.shape[0]}')
+  if df_result_simulation.shape[0] > 0:
+    chave = (df_result_simulation['symbol'] == symbol) & \
+        (df_result_simulation['interval'] == interval) & \
+        (df_result_simulation['estimator'] == estimator) & \
+        (df_result_simulation['imbalance_method'] == imbalance_method) & \
+        (df_result_simulation['stop_loss'] == float(stop_loss)) & \
+        (df_result_simulation['times_regression_profit_and_loss'] == int(times_regression_profit_and_loss)) & \
+        (df_result_simulation['numeric_features'] == numeric_features)
+#        (df_resultado_simulacao['regression_times'] == regression_times) & \
 #        (df_resultado_simulacao['start_test_date'] == start_test_date) & \
 
     log.debug(f'chave.sum(): {chave.sum()}')
@@ -1202,24 +1421,71 @@ def has_results(symbol,
 
   return False
 
-def get_params_robo_trader(params, param_name, type = None, split = False):
+
+def get_params_robo_trader(params, param_name, type=None, split=False):
 
   cai = params['CAI'][param_name] if 'CAI' in params else None
   sobe = params['SOBE'][param_name] if 'SOBE' in params else None
-  
+
   if split:
     cai = cai.split(',') if cai is not None else None
     sobe = sobe.split(',') if sobe is not None else None
-  
+
   result = {}
   match type:
-    case 'int': 
+    case 'int':
       result['CAI'] = int(cai) if cai is not None else 0
       result['SOBE'] = int(sobe) if sobe is not None else 0
       return result
-    case 'float': 
+    case 'float':
       result['CAI'] = float(cai) if cai is not None else 0.0
       result['SOBE'] = float(sobe) if sobe is not None else 0.0
       return result
-    
+
   return {'CAI': cai, 'SOBE': sobe}
+
+
+def predict_strategy_index(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=myenv.max_rsi, min_rsi=myenv.min_rsi):
+  result_strategy = 'ESTAVEL'
+
+  price = 0.0
+  rsi = 0.0
+  p_ema_value = 0.0
+
+  if type(all_data) == pd.DataFrame:
+    price = all_data.tail(1)['close'].values[0]
+    rsi = all_data.tail(1)['rsi'].values[0]
+    p_ema_value = all_data.tail(1)[f'ema_{p_ema}p'].values[0]
+  elif type(all_data) == pd.core.series.Series:
+    price = all_data['close']
+    rsi = all_data['rsi']
+    p_ema_value = all_data[f'ema_{p_ema}p']
+
+  if price > p_ema_value and rsi >= max_rsi:
+    result_strategy = 'CAI'
+
+  if price < p_ema_value and rsi <= min_rsi:
+    result_strategy = 'SOBE'
+
+  return result_strategy
+
+
+def predict_strategy_index_all_data(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=myenv.max_rsi, min_rsi=myenv.min_rsi):
+  label_ema = f'ema_{p_ema}p'
+  all_data['strategy'] = 'ESTAVEL'
+  all_data['strategy'] = np.where((all_data['close'] > all_data[label_ema]) & (all_data['rsi'] >= max_rsi), 'CAI', all_data['strategy'])
+  all_data['strategy'] = np.where((all_data['close'] < all_data[label_ema]) & (all_data['rsi'] <= min_rsi), 'SOBE', all_data['strategy'])
+  return all_data
+
+
+def calc_take_profit_stop_loss_index(all_data, target_margin, stop_loss_multiplier):
+  all_data['take_profit'] = 0.0
+  all_data['stop_loss'] = 0.0
+
+  all_data['take_profit'] = np.where(all_data['strategy'] == 'CAI', all_data['close'] * (1 - target_margin / 100), all_data['take_profit'])
+  all_data['stop_loss'] = np.where(all_data['strategy'] == 'CAI', all_data['close'] * (1 + (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
+
+  all_data['take_profit'] = np.where(all_data['strategy'] == 'SOBE', all_data['close'] * (1 + target_margin / 100), all_data['take_profit'])
+  all_data['stop_loss'] = np.where(all_data['strategy'] == 'SOBE', all_data['close'] * (1 - (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
+
+  return all_data

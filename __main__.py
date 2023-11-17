@@ -9,8 +9,6 @@ print(file, parent, os.getcwd())
 
 os.environ["PYCARET_CUSTOM_LOGGING_LEVEL"] = "CRITICAL"
 
-import src.train as tr
-#import src.batch_analysis as ba
 import src.start_batch_training as bt
 import src.start_robo_trader as bot
 import src.myenv as myenv
@@ -52,6 +50,7 @@ def main(args):
   log_level = logging.INFO
   interval_list = ['1h']
   start_date = '2010-01-01'
+  tail = -1
 
   # Generic Params
   for arg in args:
@@ -68,12 +67,14 @@ def main(args):
       interval_list = aux.split(',')
     if (arg.startswith('-start-date=')):
       start_date = arg.split('=')[1]
+    if (arg.startswith('-tail=')):
+      tail = int(arg.split('=')[1])
 
   log = configure_log(log_level)
   if '-download-data' in args:
     for interval in interval_list:
-      log.info(f'Starting download data, in interval ({interval}) for all Symbols in database...')
-      utils.download_data(save_database=True, parse_dates=False, interval=interval, start_date=start_date)
+      log.info(f'Starting download data, in interval ({interval}) start-date: {start_date} tail: {tail} for all Symbols in database...')
+      utils.download_data(save_database=True, parse_dates=False, tail=tail, interval=interval, start_date=start_date)
     sys.exit(0)
 
   if '-prepare-best-parameters' in args:
@@ -82,16 +83,10 @@ def main(args):
     log.info(params)
     sys.exit(0)
 
-  if '-train-model' in args:
-    log.info('Starting training...')
-    if tr.main(args):
-      log.info('Trainin completed ** SUCCESS **')
-    else:
-      log.info('Trainin ** FAILS **')
-    sys.exit(0)
-
-  if '-simule-trading' in args:
-    tr.exec_simule_trading(args)
+  if '-prepare-best-parameters-index' in args:
+    log.info('Starting Prepare Best Parameters Index...')
+    params = utils.prepare_best_params_index()
+    log.info(params)
     sys.exit(0)
 
   if '-run-bot' in args:
@@ -99,12 +94,6 @@ def main(args):
     bot.main(args)
     sys.exit(0)
 
-  '''
-  if '-batch-analysis' in args:
-    log.info('Starting batch analysis...')
-    ba.main(args)
-    sys.exit(0)
-  '''
   if '-batch-training' in args:
     log.info('Starting batch training...')
     bt.main(args)

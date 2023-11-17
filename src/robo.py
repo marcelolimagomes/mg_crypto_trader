@@ -4,7 +4,7 @@ import sys
 from src.utils import *
 from src.calcEMA import calc_RSI
 from src.myenv import *
-from src.train import *
+from train_ml import *
 import src.send_message as sm
 
 from binance.client import Client

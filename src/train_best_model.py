@@ -1,4 +1,4 @@
-from src.trainig import Train
+from src.train_ml import TrainML
 
 import src.utils as utils
 import src.calcEMA as calc_utils
@@ -37,7 +37,7 @@ class TrainBestModel:
               columns=myenv.all_cols,
               parse_dates=True,
               updata_data_from_web=False)
-          
+
           _aux_data = _aux_data.tail(myenv.rows_to_train)
           self._all_data_list[ix_symbol] = _aux_data
           self.log.info(f'Loaded data for symbol: {ix_symbol} - shape: {_aux_data.shape}')
@@ -60,7 +60,7 @@ class TrainBestModel:
         if 'rsi' not in self._all_data_list[ix_symbol].columns:
           self.log.info(f'Calc RSI for symbol: {ix_symbol}')
           self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
-          #self._all_data_list[ix_symbol].dropna(inplace=True)
+          # self._all_data_list[ix_symbol].dropna(inplace=True)
           self.log.info('info after CalcRSI start_date: ') if self._verbose else None
           self._all_data_list[ix_symbol].info() if self._verbose else None
 
@@ -79,7 +79,7 @@ class TrainBestModel:
 
       except Exception as e:
         self.log.error(e)
-  
+
   def run(self):
     self.log.info(f'{self.__class__.__name__}: Start _data_collection...')
     self._data_collection()
@@ -125,14 +125,14 @@ class TrainBestModel:
           'arguments': param['arguments'],
           'no_tune': '-no-tune' in param['arguments'],
           'feature_selection': '-feature-selection' in param['arguments'],
-          'combine_features': '-combine-features' in param['arguments'],          
+          'combine_features': '-combine-features' in param['arguments'],
           'save_model': True}
       params_list.append(train_param)
 
     results = []
     for params in params_list:
-      train = Train(params)
-      res = train.run()
+      train_ml = TrainML(params)
+      res = train_ml.run()
       results.append(res)
 
     self.log.info(f'Results of {len(params_list)} Models execution: \n{pd.DataFrame(results, columns=["status"])["status"].value_counts()}')
