@@ -144,12 +144,11 @@ class BatchTrainIndex:
     self._data_collection()
     self.log.info(f'{self.pl}: {self.__class__.__name__}: Start _data_preprocessing...')
     self._data_preprocessing()
-
     self.log.info(f'{self.pl}: {self.__class__.__name__}: Start Running...')
 
     with Pool(processes=20) as pool:
       manager = Manager()
-      df_result_simulation = manager.dict()
+      df_result_simulation_list = manager.dict()
       lock = manager.Lock()
 
       params_list = []
@@ -157,89 +156,61 @@ class BatchTrainIndex:
       for interval in self._interval_list:
         for symbol in self._symbol_list:
           ix_symbol = f'{symbol}_{interval}'
-          df_result_simulation[ix_symbol] = utils.get_index_results(symbol, interval)
+          df_result_simulation_list[ix_symbol] = utils.get_index_results(symbol, interval)
           for target_margin in self._target_margin_list:
             for p_ema in range(self._range_p_ema_ini, self._range_p_ema_end + 1, 25):
               for range_min_rsi in range(self._range_min_rsi, 36 + 1, 2):
                 for range_max_rsi in range(72, self._range_max_rsi + 1, 2):
                   for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
-                    if not utils.has_index_results(df_result_simulation[ix_symbol], symbol, interval, target_margin, p_ema, range_min_rsi, range_max_rsi, stop_loss_multiplier):
-                      train_param = {
-                          'all_data': self._all_data_list[ix_symbol],
-                          'symbol': symbol,
-                          'interval': interval,
-                          'target_margin': float(target_margin),
-                          'range_min_rsi': int(range_min_rsi),
-                          'range_max_rsi': int(range_max_rsi),
-                          'p_ema': int(p_ema),
-                          'stop_loss_multiplier': int(stop_loss_multiplier),
-                          'calc_rsi': self._calc_rsi,
-                          'verbose': self._verbose,
-                          'lock': self._lock,
-                          'arguments': str(sys.argv[1:])}
-                      params_list.append(train_param)
-                      _prm_list.append(train_param.copy())
-                    else:
-                      self.log.info(f'{self.pl}: Already exists: {symbol}_{interval}_{target_margin}_{p_ema}_{range_min_rsi}_{range_max_rsi}_{stop_loss_multiplier}')
-                      print(f'{self.pl}: Already exists: {symbol}_{interval}_{target_margin}_{p_ema}_{range_min_rsi}_{range_max_rsi}_{stop_loss_multiplier}')
+                    train_param = {
+                        'all_data': self._all_data_list[ix_symbol],
+                        'symbol': symbol,
+                        'interval': interval,
+                        'target_margin': float(target_margin),
+                        'range_min_rsi': int(range_min_rsi),
+                        'range_max_rsi': int(range_max_rsi),
+                        'p_ema': int(p_ema),
+                        'stop_loss_multiplier': int(stop_loss_multiplier),
+                        'calc_rsi': self._calc_rsi,
+                        'verbose': self._verbose,
+                        'lock': self._lock,
+                        'arguments': str(sys.argv[1:])}
+                    params_list.append(train_param)
+                    _prm_list.append(train_param.copy())
 
       self.log.info(f'{self.pl}: Total Trainning Models: {len(params_list)}')
-
       for _prm in _prm_list:
         del _prm['all_data']
         del _prm['lock']
-
       pd.DataFrame(_prm_list).to_csv(f'{myenv.datadir}/params_list{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv', index=False)
-      results = []
 
       self.log.info(f'{self.pl}: Will Start {len(params_list)} Threads.')
-
+      params_list = sorted(params_list, key=lambda p: (str(p['p_ema']), str(p['target_margin']), str(p['range_max_rsi']), str(p['range_min_rsi']), str(p['symbol']), str(p['interval'])))
       process_list = []
-      for params in params_list:
+      count = 0
+      for p in params_list:
+        ix_symbol = f"{p['symbol']}_{p['interval']}"
+        _key_tm = f"{ix_symbol}_{p['target_margin']}"
+        name = f"{_key_tm}_{p['p_ema']}_{p['range_min_rsi']}_{p['range_max_rsi']}_{p['stop_loss_multiplier']}"
         try:
-          ix_symbol = f"{params['symbol']}_{params['interval']}_{params['target_margin']}_{params['range_min_rsi']}_{params['range_max_rsi']}_{params['p_ema']}"
-          # train_index = TrainIndex(params)
-          process = pool.apply_async(func=utils._finalize_index_train, kwds={'train_param': params, 'lock': lock, 'df_result_simulation': df_result_simulation})
-          process_list.append({'name': ix_symbol, 'symbol': params['symbol'], 'interval': params['interval'], 'process': process})
+          if not utils.has_index_results(df_result_simulation_list[ix_symbol], p['symbol'], p['interval'], p['target_margin'], p['p_ema'], p['range_min_rsi'], p['range_max_rsi'], p['stop_loss_multiplier']):
+            process = pool.apply_async(func=utils._finalize_index_train, kwds={'train_param': p, 'lock': lock, 'df_result_simulation_list': df_result_simulation_list, 'count': count})
+            process_list.append({'name': name, 'symbol': p['symbol'], 'interval': p['interval'], 'target_margin': p['target_margin'], 'process': process})
+            count += 1
         except Exception as e:
           self.log.exception(e)
 
-      aux_ix_symbol = ''
-      aux_s = ''
-      aux_i = ''
-      first_p = True
+      self.log.info(f'{self.pl}: Will Start collecting results for {len(params_list)} Threads.')
+      results = []
       for p in process_list:
         try:
-          ix_symbol = f"{p['symbol']}_{p['interval']}"
-          if ix_symbol != aux_ix_symbol:
-            if first_p:
-              first_p = False
-              aux_ix_symbol = ix_symbol
-              aux_s = p['symbol']
-              aux_i = p['interval']
-            else:
-              lock.acquire()
-              utils.only_save_index_results(df_result_simulation[aux_ix_symbol], aux_s, aux_i)
-              lock.release()
-              print(f'{self.pl}: Partial Results Save for => {aux_ix_symbol}')
-              self.log.info(f'{self.pl}: Partial Results Save for => {aux_ix_symbol}')
-              aux_ix_symbol = ix_symbol
-              aux_s = p['symbol']
-              aux_i = p['interval']
-
           res = p['process'].get()
           results.append(res)
-          # self.log.info(f'{self.pl}: Process Done: {p["name"]} ==> {res}')
         except Exception as e:
           self.log.exception(e)
           results.append("TIMEOUT_ERROR")
 
-      for interval in self._interval_list:
-        for symbol in self._symbol_list:
-          ix_symbol = f'{symbol}_{interval}'
-          if ix_symbol in df_result_simulation:
-            utils.only_save_index_results(df_result_simulation[ix_symbol], symbol, interval)
-            self.log.info(f'{self.pl}: Results Save for => {ix_symbol}')
-            print(f'{self.pl}: Results Save for => {ix_symbol}')
-
+      self.log.info(f'{self.pl}: Saving Results for all symbols...')
+      utils.save_all_results_index_simulation(df_result_simulation_list)
+      self.log.info(f'{self.pl}: Saved Results for all symbols!')
       self.log.info(f'{self.pl}: Results of {len(params_list)} Models execution: \n{pd.DataFrame(results, columns=["status"])["status"].value_counts()}')

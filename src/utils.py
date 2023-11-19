@@ -1153,7 +1153,7 @@ def simule_index_trading(_data: pd.DataFrame, symbol, interval, p_ema: int, star
   perform_sell = False
   purchase_price = 0.0
   purchase_strategy = ''
-  log.info(f'Start Simule Trading: {symbol}_{interval} - Shape: {_data.shape} - Amount Invested: {start_amount_invested:.2f} - Target Margin: {target_margin}% - EMA: {p_ema}p - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}')
+  log.debug(f'Start Simule Trading: {symbol}_{interval} - Shape: {_data.shape} - Amount Invested: {start_amount_invested:.2f} - Target Margin: {target_margin}% - EMA: {p_ema}p - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}')
 
   for _, row in _data.iterrows():
     actual_price = row['close']
@@ -1258,7 +1258,7 @@ def save_index_results(df_result_simulation, symbol, interval, target_margin, p_
   return new_df_result_simulation
 
 
-def _finalize_index_train(train_param, lock, df_result_simulation):
+def _finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
   result = 'SUCESS'
   try:
     pnl = simule_index_trading(
@@ -1272,12 +1272,12 @@ def _finalize_index_train(train_param, lock, df_result_simulation):
       train_param['range_max_rsi'],
       train_param['stop_loss_multiplier'])
 
-    # Lock Thread to register results
     ix_symbol = f'{train_param["symbol"]}_{train_param["interval"]}'
+    save = (count % 1000 == 0)  # Save results every 5000 iterations
 
-    lock.acquire()
-    df_result_simulation[ix_symbol] = save_index_results(
-        df_result_simulation[ix_symbol],
+    lock.acquire()  # Lock Thread to register results
+    df_result_simulation_list[ix_symbol] = save_index_results(
+        df_result_simulation_list[ix_symbol],
         train_param['symbol'],
         train_param['interval'],
         train_param['target_margin'],
@@ -1289,11 +1289,25 @@ def _finalize_index_train(train_param, lock, df_result_simulation):
         train_param['stop_loss_multiplier'],
         train_param['arguments'],
         False)
+    if save:
+      save_all_results_index_simulation(df_result_simulation_list)
+      log.info(f'_finalize_index_train: Count==> {count}: Partial Results Save for all symbols')
+      print(f'_finalize_index_train: Count==> {count}: Partial Results Save for all symbols')
     lock.release()
   except Exception as e:
     log.exception(e)
     result = 'ERROR'
   return result
+
+
+def save_all_results_index_simulation(df_result_simulation_list):
+  for key in df_result_simulation_list.keys():
+    print(f'KEY>>>>>>>>>>> {key}')
+    symbol = key.split('_')[0]
+    interval = key.split('_')[1]
+    only_save_index_results(df_result_simulation_list[key], symbol, interval)
+    log.info(f'save_all_results: Results Save for => {key}')
+    print(f'save_all_results: Results Save for => {key}')
 
 
 def only_save_index_results(df_result_simulation, symbol, interval):
