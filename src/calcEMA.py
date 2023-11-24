@@ -97,7 +97,6 @@ def calc_ema_periods(df: pd.DataFrame, periods_of_time: any, close_price='close'
           df[s_diff_price] = df[s_diff_price].astype('float32')
   except Exception as error:
     log.exception(error)
-    sys.exit(1)
 
   return df
 
