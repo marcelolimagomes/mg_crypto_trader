@@ -58,3 +58,5 @@ telegram_key = []
 min_rsi = 30
 max_rsi = 70
 p_ema = 200
+
+retrain_last_results = 100

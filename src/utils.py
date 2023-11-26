@@ -18,7 +18,7 @@ from pycaret.classification.oop import ClassificationExperiment
 from binance.client import Client
 from itertools import combinations
 from datetime import datetime, timedelta
-from multiprocessing import Process, Pool
+from multiprocessing import Manager, Pool
 
 
 from sqlalchemy import desc
@@ -112,7 +112,7 @@ def reduce_database(interval_list=['1m', '5m', '15m', '30m', '1h']):
             data.info()
             data = data[(data['open_time'] >= parsed_date)]
             data.info()
-            data.to_csv(data_file, sep=';', index=False, compression=dict(method='zip'))
+            data.to_csv(data_file, sep=';', index=False, )
 
 
 def get_account_balance():
@@ -221,15 +221,15 @@ def prepare_best_params():
             df = pd.read_csv(file_path, sep=';')
         df['count_numeric_features'] = df['numeric_features'].apply(lambda x: len(x.split(',')))
 
-        df.sort_values(['CAI', 'count_numeric_features'], ascending=[True, False], inplace=True)
+        df.sort_values(['SHORT', 'count_numeric_features'], ascending=[True, False], inplace=True)
         df_aux = df.tail(1)
-        df_aux.insert(1, 'strategy', 'CAI')
+        df_aux.insert(1, 'strategy', 'SHORT')
         if df_aux['max_score'].values[0] > 0.5:
             df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
-        df.sort_values(['SOBE', 'count_numeric_features'], ascending=[True, False], inplace=True)
+        df.sort_values(['LONG', 'count_numeric_features'], ascending=[True, False], inplace=True)
         df_aux = df.tail(1)
-        df_aux.insert(1, 'strategy', 'SOBE')
+        df_aux.insert(1, 'strategy', 'LONG')
         if df_aux['max_score'].values[0] > 0.5:
             df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
@@ -261,6 +261,25 @@ def prepare_best_params_index():
     top_params = df_top_params.to_dict(orient='records')
     log.info(f'Top Params Index: \n{top_params}')
     return top_params
+
+
+def prepare_best_params_index_retrain():
+    file_list = glob.glob(os.path.join(f'{myenv.datadir}/', 'resultado_simulacao_index_*.csv'))
+    df_top_params = pd.DataFrame()
+    for file_path in file_list:
+        if os.path.isfile(file_path):
+            df = pd.read_csv(file_path, sep=';')
+
+        df.sort_values(['pnl'], ascending=True, inplace=True)
+        df_aux = df.tail(myenv.retrain_last_results)
+        df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
+
+    df_top_params.sort_values(['symbol', 'interval'], inplace=True)
+    top_paramers_filename = f'{myenv.datadir}/retrain_params_index_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    log.info(f'Retrain Parameters Index save to: {top_paramers_filename}')
+    df_top_params.to_csv(top_paramers_filename, sep=';', index=False)
+    top_params = df_top_params.to_dict(orient='records')
+    return top_params, df_top_params[['symbol', 'interval']].drop_duplicates(ignore_index=True).to_dict(orient='records'), df_top_params['p_ema'].min(), df_top_params['p_ema'].max()
 
 
 def get_best_parameters():
@@ -331,15 +350,15 @@ def combine_list(list_of_elements):
 
 def increment_time(interval='1h'):
     match(interval):
-        case '1min':
+        case '1m':
             return pd.Timedelta(minutes=1)
-        case '3min':
+        case '3m':
             return pd.Timedelta(minutes=3)
-        case '5min':
+        case '5m':
             return pd.Timedelta(minutes=5)
-        case '15min':
+        case '15m':
             return pd.Timedelta(minutes=15)
-        case '30min':
+        case '30m':
             return pd.Timedelta(minutes=30)
         case '1h':
             return pd.Timedelta(hours=1)
@@ -787,9 +806,9 @@ def get_database(symbol, interval='1h', tail=-1, columns=['open_time', 'close'],
     log.info(f'get_database: columns: {columns}')
     if os.path.exists(database_name):
         if parse_dates:
-            df_database = pd.read_csv(database_name, sep=';', parse_dates=myenv.date_features, date_parser=date_parser, decimal='.', usecols=columns, compression=dict(method='zip'))
+            df_database = pd.read_csv(database_name, sep=';', parse_dates=myenv.date_features, date_parser=date_parser, decimal='.', usecols=columns, )
         else:
-            df_database = pd.read_csv(database_name, sep=';', decimal='.', usecols=columns, compression=dict(method='zip'))
+            df_database = pd.read_csv(database_name, sep=';', decimal='.', usecols=columns, )
         df_database = parse_type_fields(df_database, parse_dates)
         df_database = adjust_index(df_database)
         df_database = df_database[columns]
@@ -806,7 +825,7 @@ def get_database_name(symbol, interval):
 
 def download_data(save_database=True, parse_dates=False, interval='1h', tail=-1, start_date='2010-01-01'):
     symbols = pd.read_csv(myenv.datadir + '/symbol_list.csv')
-    with Pool(processes=20) as pool:
+    with Pool(processes=(os.cpu_count() * 2)) as pool:
         process_list = []
         results = []
         for symbol in symbols['symbol']:
@@ -925,7 +944,7 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
         sulfix_name = f'{symbol}_{interval}.dat'
         if not os.path.exists(database_name.removesuffix(sulfix_name)):
             os.makedirs(database_name.removesuffix(sulfix_name))
-        df_database.to_csv(database_name, sep=';', index=False, compression=dict(method='zip'))
+        df_database.to_csv(database_name, sep=';', index=False, )
         log.info(f'get_data: Database updated at {database_name}')
 
     log.info(f'New shape after get_data: {df_database.shape}')
@@ -940,14 +959,14 @@ def send_message(df_predict):
     log.info(f'send_message: {message}')
 
 
-def set_status_PL(row, stop_loss, max_regression_profit_and_loss, prefix_col_diff, strategy='SOBE_CAI'):
+def set_status_PL(row, stop_loss, max_regression_profit_and_loss, prefix_col_diff, strategy='LONG_SHORT'):
     for s in range(1, max_regression_profit_and_loss + 1):
-        if (strategy == 'SOBE') or (strategy == 'SOBE_CAI'):
+        if (strategy == 'LONG') or (strategy == 'LONG_SHORT'):
             if row[f'{prefix_col_diff}{s}'] >= stop_loss:
-                return f'SOBE_{stop_loss}'
-        if (strategy == 'CAI') or (strategy == 'SOBE_CAI'):
+                return f'LONG_{stop_loss}'
+        if (strategy == 'SHORT') or (strategy == 'LONG_SHORT'):
             if row[f'{prefix_col_diff}{s}'] <= -stop_loss:
-                return f'CAI_{stop_loss}'
+                return f'SHORT_{stop_loss}'
     return 'ESTAVEL'
 
 
@@ -963,13 +982,13 @@ def regression_PnL(data: pd.DataFrame, label: str, diff_percent: float, max_regr
         cols.append(col + str(i))
         diff_cols.append(diff_col + str(i))
 
-    if strategy == 'SOBE_CAI':
-        _data[label + '_sobe'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE'])
-        _data[label + '_cai'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'CAI'])
+    if strategy == 'LONG_SHORT':
+        _data[label + '_sobe'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'LONG'])
+        _data[label + '_cai'] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SHORT'])
         _data[label + '_sobe'] = pd.Categorical(_data[label + '_sobe'])
         _data[label + '_cai'] = pd.Categorical(_data[label + '_cai'])
     else:
-        _data[label] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'SOBE_CAI'])
+        _data[label] = _data.apply(set_status_PL, axis=1, args=[diff_percent, max_regression_profit_and_loss, diff_col, 'LONG_SHORT'])
         _data[label] = pd.Categorical(_data[label])
 
     if drop_calc_cols:
@@ -1006,10 +1025,10 @@ def regress_until_diff(data: pd.DataFrame, diff_percent: float, max_regression_p
         data['shift_x'].iloc[row_nu:row_nu + 1] = i - 1 if i == max_regression_profit_and_loss + 1 else i
 
         if diff >= diff_percent:
-            data[label].iloc[row_nu:row_nu + 1] = 'SOBE_' + str(diff_percent)
+            data[label].iloc[row_nu:row_nu + 1] = 'LONG_' + str(diff_percent)
 
         elif diff <= -diff_percent:
-            data[label].iloc[row_nu:row_nu + 1] = 'CAI_' + str(diff_percent)
+            data[label].iloc[row_nu:row_nu + 1] = 'SHORT_' + str(diff_percent)
 
         # end for
 
@@ -1050,18 +1069,18 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
         # Start Buy Operation
         if (not purchased):
             prediction_label = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]
-            if prediction_label.startswith('SOBE') or prediction_label.startswith('CAI'):
+            if prediction_label.startswith('LONG') or prediction_label.startswith('SHORT'):
                 operation = prediction_label.split('_')[0]
                 margin_operation = float(prediction_label.split('_')[1])
 
-            if operation.startswith('SOBE') or operation.startswith('CAI'):
+            if operation.startswith('LONG') or operation.startswith('SHORT'):
                 purchased = True
                 purchase_price = actual_price
 
-                if operation.startswith('CAI'):  # Short
+                if operation.startswith('SHORT'):  # Short
                     take_profit_price = actual_price * (1 - margin_operation / 100)
                     stop_loss_price = actual_price * (1 + (margin_operation * myenv.stop_loss_multiplier) / 100)
-                elif operation.startswith('SOBE'):  # Long
+                elif operation.startswith('LONG'):  # Long
                     take_profit_price = actual_price * (1 + margin_operation / 100)
                     stop_loss_price = actual_price * (1 - (margin_operation * myenv.stop_loss_multiplier) / 100)
 
@@ -1075,11 +1094,11 @@ def simule_trading_crypto2(df_predicted: pd.DataFrame, start_date, end_date, val
         # Starts Sell Operation
         if purchased:
             perform_sell = False
-            if operation.startswith('SOBE'):
+            if operation.startswith('LONG'):
                 margin = (actual_price - purchase_price) / purchase_price
                 if ((actual_price >= take_profit_price) or (actual_price <= stop_loss_price)):  # Long ==> Sell - Take Profit / Stop Loss
                     perform_sell = True
-            elif operation.startswith('CAI'):
+            elif operation.startswith('SHORT'):
                 margin = (purchase_price - actual_price) / purchase_price
                 if ((actual_price <= take_profit_price) or (actual_price >= stop_loss_price)):  # Short ==> Sell - Take Profit / Stop Loss
                     perform_sell = True
@@ -1117,7 +1136,7 @@ def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, valu
         open_time = pd.to_datetime(_data.iloc[row_nu:row_nu + 1]['open_time'].values[0]).strftime("%Y-%m-%d %Hh")
         operacao = _data.iloc[row_nu:row_nu + 1]['prediction_label'].values[0]
 
-        if (operacao.startswith('SOBE') or operacao.startswith('CAI')) and not comprado:
+        if (operacao.startswith('LONG') or operacao.startswith('SHORT')) and not comprado:
             operacao_compra = operacao
             valor_compra = _data.iloc[row_nu:row_nu + 1]['close'].values[0]
             log.debug(f'[{row_nu}][{operacao_compra}][{open_time}] => Compra: {valor_compra:.4f}')
@@ -1129,12 +1148,12 @@ def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, valu
         if (abs(diff) >= stop_loss) and comprado:
             valor_venda = _data.iloc[row_nu:row_nu + 1]['close'].values[0]
             if revert:
-                if operacao_compra.startswith('SOBE'):
+                if operacao_compra.startswith('LONG'):
                     saldo -= saldo * (diff / 100)
                 else:
                     saldo -= saldo * (-diff / 100)
             else:
-                if operacao_compra.startswith('SOBE'):
+                if operacao_compra.startswith('LONG'):
                     saldo += saldo * (diff / 100)
                 else:
                     saldo += saldo * (-diff / 100)
@@ -1153,10 +1172,10 @@ def simule_trading_crypto(df_predicted: pd.DataFrame, start_date, end_date, valu
 def calc_take_profit_stop_loss(strategy, actual_value, margin, stop_loss_multiplier=myenv.stop_loss_multiplier):
     take_profit_value = 0.0
     stop_loss_value = 0.0
-    if strategy.startswith('CAI'):  # Short
+    if strategy.startswith('SHORT'):  # Short
         take_profit_value = actual_value * (1 - margin / 100)
         stop_loss_value = actual_value * (1 + (margin * stop_loss_multiplier) / 100)
-    elif strategy.startswith('SOBE'):  # Long
+    elif strategy.startswith('LONG'):  # Long
         take_profit_value = actual_value * (1 + margin / 100)
         stop_loss_value = actual_value * (1 - (margin * stop_loss_multiplier) / 100)
     return take_profit_value, stop_loss_value
@@ -1186,7 +1205,7 @@ def simule_index_trading(_data: pd.DataFrame, symbol, interval, p_ema: int, star
         if not purchased:
             strategy = predict_strategy_index(row, p_ema, max_rsi, min_rsi)
             # log.debug(f'[{row_nu}][{strategy}] => Purchased: {purchased} - Price: {actual_price:.6f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi} - Max RSI: {max_rsi}')
-            if strategy.startswith('SOBE') or strategy.startswith('CAI'):  # If true, BUY
+            if strategy.startswith('LONG') or strategy.startswith('SHORT'):  # If true, BUY
                 purchased = True
                 purchase_price = actual_price
                 purchase_strategy = strategy
@@ -1195,13 +1214,13 @@ def simule_index_trading(_data: pd.DataFrame, symbol, interval, p_ema: int, star
 {take_profit:.2f} - Stop Loss: {stop_loss:.2f} - RSI: {rsi:.2f}% - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}')
                 continue
 
-        if purchased:  # and (operation.startswith('SOBE') or operation.startswith('CAI')):
+        if purchased:  # and (operation.startswith('LONG') or operation.startswith('SHORT')):
             # log.debug(f'[{row_nu}][{strategy}] => Purchased: {purchased} - Price: {actual_price:.6f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi} - Max RSI: {max_rsi}')
-            if purchase_strategy.startswith('SOBE'):
+            if purchase_strategy.startswith('LONG'):
                 margin_operation = (actual_price - purchase_price) / purchase_price
                 if ((actual_price >= take_profit) or (actual_price <= stop_loss)):  # Long ==> Sell - Take Profit / Stop Loss
                     perform_sell = True
-            elif purchase_strategy.startswith('CAI'):
+            elif purchase_strategy.startswith('SHORT'):
                 margin_operation = (purchase_price - actual_price) / purchase_price
                 if ((actual_price <= take_profit) or (actual_price >= stop_loss)):  # Short ==> Sell - Take Profit / Stop Loss
                     perform_sell = True
@@ -1282,8 +1301,8 @@ def _finalize_index_train(train_param, lock, df_result_simulation_list, count=1)
           train_param['p_ema'],
           myenv.default_amount_invested,
           train_param['target_margin'],
-          train_param['range_min_rsi'],
-          train_param['range_max_rsi'],
+          train_param['min_rsi'],
+          train_param['max_rsi'],
           train_param['stop_loss_multiplier'])
 
         ix_symbol = f'{train_param["symbol"]}_{train_param["interval"]}'
@@ -1296,8 +1315,8 @@ def _finalize_index_train(train_param, lock, df_result_simulation_list, count=1)
             train_param['interval'],
             train_param['target_margin'],
             train_param['p_ema'],
-            train_param['range_min_rsi'],
-            train_param['range_max_rsi'],
+            train_param['min_rsi'],
+            train_param['max_rsi'],
             myenv.default_amount_invested,
             pnl,
             train_param['stop_loss_multiplier'],
@@ -1319,9 +1338,10 @@ def save_all_results_index_simulation(df_result_simulation_list):
         print(f'KEY>>>>>>>>>>> {key}')
         symbol = key.split('_')[0]
         interval = key.split('_')[1]
-        only_save_index_results(df_result_simulation_list[key], symbol, interval)
-        log.info(f'save_all_results: Results Save for => {key}')
-        print(f'save_all_results: Results Save for => {key}')
+        if df_result_simulation_list[key].shape[0] > 0:
+            only_save_index_results(df_result_simulation_list[key], symbol, interval)
+            log.info(f'save_all_results: Results Save for => {key}')
+            print(f'save_all_results: Results Save for => {key}')
 
 
 def only_save_index_results(df_result_simulation, symbol, interval):
@@ -1338,7 +1358,7 @@ def has_index_results(df_result_simulation, symbol, interval, target_margin, p_e
         else:
             return False
 
-    if df_result_simulation is not None:
+    if df_result_simulation is not None and df_result_simulation.shape[0] > 0:
         chave = (df_result_simulation['symbol'] == symbol) & (df_result_simulation['interval'] == interval) & (df_result_simulation['target_margin'] == float(target_margin)) & (df_result_simulation['p_ema'] == int(p_ema)) & \
                 (df_result_simulation['min_rsi'] == int(min_rsi)) & (df_result_simulation['max_rsi'] == int(max_rsi)) & (df_result_simulation['stop_loss_multiplier'] == int(stop_loss_multiplier))
         return chave.sum() > 0
@@ -1386,7 +1406,7 @@ def save_results(model_name,
         for i in range(0, len(res_score.index.values)):
             field = res_score.index.values[i].split('_')[0]
             result_simulado[field] = round(res_score["_score"].values[i], 4)
-        result_simulado['max_score'] = max(result_simulado['CAI'], result_simulado['SOBE'])
+        result_simulado['max_score'] = max(result_simulado['SHORT'], result_simulado['LONG'])
 
     # result_simulado['profit_and_loss_value'] = round(final_value - start_value, 2)
     # result_simulado['start_value'] = round(start_value, 2)
@@ -1452,8 +1472,8 @@ def has_results(symbol,
 
 def get_params_robo_trader(params, param_name, type=None, split=False):
 
-    cai = params['CAI'][param_name] if 'CAI' in params else None
-    sobe = params['SOBE'][param_name] if 'SOBE' in params else None
+    cai = params['SHORT'][param_name] if 'SHORT' in params else None
+    sobe = params['LONG'][param_name] if 'LONG' in params else None
 
     if split:
         cai = cai.split(',') if cai is not None else None
@@ -1462,15 +1482,15 @@ def get_params_robo_trader(params, param_name, type=None, split=False):
     result = {}
     match type:
         case 'int':
-            result['CAI'] = int(cai) if cai is not None else 0
-            result['SOBE'] = int(sobe) if sobe is not None else 0
+            result['SHORT'] = int(cai) if cai is not None else 0
+            result['LONG'] = int(sobe) if sobe is not None else 0
             return result
         case 'float':
-            result['CAI'] = float(cai) if cai is not None else 0.0
-            result['SOBE'] = float(sobe) if sobe is not None else 0.0
+            result['SHORT'] = float(cai) if cai is not None else 0.0
+            result['LONG'] = float(sobe) if sobe is not None else 0.0
             return result
 
-    return {'CAI': cai, 'SOBE': sobe}
+    return {'SHORT': cai, 'LONG': sobe}
 
 
 def predict_strategy_index(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=myenv.max_rsi, min_rsi=myenv.min_rsi):
@@ -1490,10 +1510,10 @@ def predict_strategy_index(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=my
         p_ema_value = all_data[f'ema_{p_ema}p']
 
     if price > p_ema_value and rsi >= max_rsi:
-        result_strategy = 'CAI'
+        result_strategy = 'SHORT'
 
     if price < p_ema_value and rsi <= min_rsi:
-        result_strategy = 'SOBE'
+        result_strategy = 'LONG'
 
     return result_strategy
 
@@ -1501,8 +1521,8 @@ def predict_strategy_index(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=my
 def predict_strategy_index_all_data(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=myenv.max_rsi, min_rsi=myenv.min_rsi):
     label_ema = f'ema_{p_ema}p'
     all_data['strategy'] = 'ESTAVEL'
-    all_data['strategy'] = np.where((all_data['close'] > all_data[label_ema]) & (all_data['rsi'] >= max_rsi), 'CAI', all_data['strategy'])
-    all_data['strategy'] = np.where((all_data['close'] < all_data[label_ema]) & (all_data['rsi'] <= min_rsi), 'SOBE', all_data['strategy'])
+    all_data['strategy'] = np.where((all_data['close'] > all_data[label_ema]) & (all_data['rsi'] >= max_rsi), 'SHORT', all_data['strategy'])
+    all_data['strategy'] = np.where((all_data['close'] < all_data[label_ema]) & (all_data['rsi'] <= min_rsi), 'LONG', all_data['strategy'])
     return all_data
 
 
@@ -1510,10 +1530,10 @@ def calc_take_profit_stop_loss_index(all_data, target_margin, stop_loss_multipli
     all_data['take_profit'] = 0.0
     all_data['stop_loss'] = 0.0
 
-    all_data['take_profit'] = np.where(all_data['strategy'] == 'CAI', all_data['close'] * (1 - target_margin / 100), all_data['take_profit'])
-    all_data['stop_loss'] = np.where(all_data['strategy'] == 'CAI', all_data['close'] * (1 + (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
+    all_data['take_profit'] = np.where(all_data['strategy'] == 'SHORT', all_data['close'] * (1 - target_margin / 100), all_data['take_profit'])
+    all_data['stop_loss'] = np.where(all_data['strategy'] == 'SHORT', all_data['close'] * (1 + (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
 
-    all_data['take_profit'] = np.where(all_data['strategy'] == 'SOBE', all_data['close'] * (1 + target_margin / 100), all_data['take_profit'])
-    all_data['stop_loss'] = np.where(all_data['strategy'] == 'SOBE', all_data['close'] * (1 - (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
+    all_data['take_profit'] = np.where(all_data['strategy'] == 'LONG', all_data['close'] * (1 + target_margin / 100), all_data['take_profit'])
+    all_data['stop_loss'] = np.where(all_data['strategy'] == 'LONG', all_data['close'] * (1 - (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
 
     return all_data
