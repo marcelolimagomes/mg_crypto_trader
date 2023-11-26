@@ -278,7 +278,7 @@ class RoboTraderIndex():
                 time.sleep(myenv.sleep_refresh)
                 cont += 1
                 cont_aviso += 1
-                if cont_aviso > 1000 and not error:
+                if cont_aviso > 100 and not error:
                     cont_aviso = 0
                     self.log_info(purchased, latest_closed_candle_open_time_aux, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
                                   take_profit, stop_loss, target_margin, strategy)

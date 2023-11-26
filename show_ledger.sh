@@ -18,6 +18,10 @@ while true; do
   sqlite3 db/mg_trader.db 'SELECT operation, sum(round(pnl, 2)), count(1) FROM ledger GROUP BY operation'
   echo ''
 
+  echo 'OPERATION | TOTAL PnL | NUMBER OPERATIONS'  
+  sqlite3 db/mg_trader.db 'SELECT operation, strategy, sum(round(pnl, 2)), count(1) FROM ledger WHERE operation="SELL" GROUP BY operation, strategy'
+  echo ''
+
   echo 'TOTAL OPERATIONS IN BUY'
   sqlite3 db/mg_trader.db 'SELECT (SELECT count(1) FROM ledger WHERE operation = "BUY" GROUP BY operation) - (SELECT count(1) FROM ledger WHERE operation = "SELL" GROUP BY operation)'
 
