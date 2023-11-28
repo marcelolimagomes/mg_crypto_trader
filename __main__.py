@@ -52,6 +52,7 @@ def main(args):
     log_level = logging.INFO
     interval_list = ['1h']
     start_date = '2010-01-01'
+    auto_start_date = False
     tail = -1
 
     # Generic Params
@@ -71,11 +72,16 @@ def main(args):
             start_date = arg.split('=')[1]
         if (arg.startswith('-tail=')):
             tail = int(arg.split('=')[1])
+        if '-auto-start-date' in args:
+            auto_start_date = True
 
     log = configure_log(log_level)
     if '-download-data' in args:
         for interval in interval_list:
-            log.info(f'Starting download data, in interval ({interval}) start-date: {start_date} tail: {tail} for all Symbols in database...')
+            if auto_start_date:
+                _, aux_date = utils.get_start_date_for_interval(interval)
+                start_date = aux_date.strftime("%Y-%m-%d")
+            log.info(f'Starting download data, in interval ({interval}) auto-start-date: {auto_start_date} - start-date: {start_date} tail: {tail} for all Symbols in database...')
             utils.download_data(save_database=True, parse_dates=False, tail=tail, interval=interval, start_date=start_date)
         sys.exit(0)
 

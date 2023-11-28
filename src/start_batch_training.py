@@ -46,6 +46,7 @@ def main(args):
     feature_selection = False
     combine_features = False
     retrain = False
+    no_validate_duplicates = False
 
     # Single arguments
     start_train_date = '2010-01-01'
@@ -71,35 +72,37 @@ def main(args):
     range_max_rsi = 70
     range_p_ema = [50, 250]
 
-    for arg in args:
-        # Boolean arguments
-        if (arg.startswith('-update-data-from-web')):
-            update_data_from_web = True
-        if (arg.startswith('-calc-rsi')):
-            calc_rsi = True
-        if (arg.startswith('-use-gpu')):
-            use_gpu = True
-        if (arg.startswith('-normalize')):
-            normalize = True
-        if (arg.startswith('-verbose')):
-            verbose = True
-        if (arg.startswith('-use-all-data-to-train')):
-            use_all_data_to_train = True
-        if (arg.startswith('-revert')):
-            revert = True
-        if (arg.startswith('-no-tune')):
-            no_tune = True
-        if (arg.startswith('-update-database')):
-            update_database = True
-        if (arg.startswith('-save-model')):
-            save_model = True
-        if (arg.startswith('-feature-selection')):
-            feature_selection = True
-        if (arg.startswith('-combine-features')):
-            combine_features = True
-        if (arg.startswith('-retrain')):
-            retrain = True
+    # Boolean arguments
+    if '-update-data-from-web' in args:
+        update_data_from_web = True
+    if '-calc-rsi' in args:
+        calc_rsi = True
+    if '-use-gpu' in args:
+        use_gpu = True
+    if '-normalize' in args:
+        normalize = True
+    if '-verbose' in args:
+        verbose = True
+    if '-use-all-data-to-train' in args:
+        use_all_data_to_train = True
+    if '-revert' in args:
+        revert = True
+    if '-no-tune' in args:
+        no_tune = True
+    if '-update-database' in args:
+        update_database = True
+    if '-save-model' in args:
+        save_model = True
+    if '-feature-selection' in args:
+        feature_selection = True
+    if '-combine-features' in args:
+        combine_features = True
+    if '-retrain' in args:
+        retrain = True
+    if '-no-validate-duplicates' in args:
+        no_validate_duplicates = True
 
+    for arg in args:
         # Single arguments
         if (arg.startswith('-start-train-date=')):
             start_train_date = arg.split('=')[1]
@@ -236,7 +239,8 @@ def main(args):
             range_min_rsi,
             range_max_rsi,
             range_p_ema,
-            retrain)
+            retrain,
+            no_validate_duplicates)
         bt.run()
     else:
         raise ValueError(f'Invalid prediction mode: {prediction_mode}')

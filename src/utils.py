@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 
 import pandas as pd
 import plotly.express as px
@@ -85,28 +86,28 @@ def split_train_test_data(data):
     return _train_data, _test_data
 
 
-def get_start_timestamp_for_interval(interval):
+def get_start_date_for_interval(interval):
     date = None
     match interval:
         case '1m':
-            date = datetime.now(pytz.utc) - timedelta(days=30 * 3)  # 3 Months
+            date = datetime.now(pytz.utc) - timedelta(days=myenv.days_to_validate_train + 1)  # 6 Months # 250p = 4,17h = 0,17d
         case '5m':
-            date = datetime.now(pytz.utc) - timedelta(days=30 * 9)  # 9 Months
+            date = datetime.now(pytz.utc) - timedelta(days=myenv.days_to_validate_train + 2)  # 9 Months # 250p = 20,83h = 0,87d
         case '15m':
-            date = datetime.now(pytz.utc) - timedelta(days=365 * 2)  # 2 Years
+            date = datetime.now(pytz.utc) - timedelta(days=myenv.days_to_validate_train + 6)  # 2 Years # 250p = 62,5h = 2,60d
         case '30m':
-            date = datetime.now(pytz.utc) - timedelta(days=365 * 3)  # 3 Years
+            date = datetime.now(pytz.utc) - timedelta(days=myenv.days_to_validate_train + 12)  # 3 Years # 250p = 125h = 5,21d
         case '1h':
-            date = datetime.now(pytz.utc) - timedelta(days=365 * 5)  # 5 Years
+            date = datetime.now(pytz.utc) - timedelta(days=myenv.days_to_validate_train + 24)  # 6 Years # 250p = 250h = 10,42d
 
-    return int(date.timestamp() * 1000)
+    return int(date.timestamp() * 1000), date
 
 
 def reduce_database(interval_list=['1m', '5m', '15m', '30m', '1h']):
     for symbol in get_symbol_list():
         for interval in interval_list:
             data_file = f'{myenv.datadir}/{symbol}/{symbol}_{interval}.dat'
-            parsed_date = get_start_timestamp_for_interval(interval)
+            parsed_date, _ = get_start_date_for_interval(interval)
             print(data_file)
             data = get_data(symbol=symbol, save_database=False, interval=interval, columns=myenv.all_klines_cols, parse_dates=False)
             data.info()
@@ -180,6 +181,7 @@ def get_latest_operation(symbol, interval):
             return ledger
     except Exception as e:
         log.exception(e)
+        traceback.print_stack()
         return None
 
 
@@ -839,6 +841,7 @@ def download_data(save_database=True, parse_dates=False, interval='1h', tail=-1,
                 results.append(f'{p["key"]}')
             except Exception as e:
                 log.exception(e)
+                traceback.print_stack()
         log.info(f'Results of Download Data: \n{results}')
 
 
@@ -907,6 +910,7 @@ def parse_type_fields(df, parse_dates=False):
 
     except Exception as e:
         log.exception(e)
+        traceback.print_stack()
 
     return df
 
@@ -1291,7 +1295,7 @@ def save_index_results(df_result_simulation, symbol, interval, target_margin, p_
     return new_df_result_simulation
 
 
-def _finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
+def finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
     result = 'SUCESS'
     try:
         pnl = simule_index_trading(
@@ -1329,6 +1333,7 @@ def _finalize_index_train(train_param, lock, df_result_simulation_list, count=1)
         lock.release()
     except Exception as e:
         log.exception(e)
+        traceback.print_stack()
         result = 'ERROR'
     return result
 
