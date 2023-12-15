@@ -270,21 +270,21 @@ def register_operation(client: Client, params):
 
 
 def register_oco_sell(client: Client, params):
-    price_precision = get_precision(params['price_precision'])
+    price_precision = get_precision(float(params['price_precision']))
     take_profit = round(float(params['take_profit']), price_precision)
     stop_loss_target = round(float(params['stop_loss']), price_precision)
-    stop_loss_trigger = round(stop_loss_target * 0.95, price_precision)
+    stop_loss_trigger = round(stop_loss_target * 1.05, price_precision)
     purchase_price = params['purchase_price']
 
     filled_asset_balance = client.get_asset_balance(params['symbol'].split('USDT')[0])
     int_quantity = filled_asset_balance['free'].split('.')[0]
-    frac_quantity = filled_asset_balance['free'].split('.')[1][:price_precision]
+    frac_quantity = filled_asset_balance['free'].split('.')[1][:price_precision + 1]
     quantity = float(int_quantity + '.' + frac_quantity)
 
     oder_oco_sell_id = None
     oder_oco_sell_id = client.order_oco_sell(symbol=params['symbol'], quantity=quantity, price=str(take_profit), stopPrice=str(stop_loss_trigger), stopLimitPrice=str(stop_loss_target), stopLimitTimeInForce='GTC')
 
-    info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} quantity: {quantity} take_profit: {take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger}'
+    info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} price_precision: {price_precision} quantity: {quantity} take_profit: {take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger}'
     log.info(info_msg)
     sm.send_to_telegram(info_msg)
 
