@@ -41,7 +41,7 @@ symbol = 'BTCUSDT'
 saldo_inicial = 100
 stop_loss_multiplier = 5
 stop_loss_range_multiplier = 7
-default_amount_invested = 25
+default_amount_invested = 80
 initial_amount_balance = 10000
 rows_to_train = 50000
 
