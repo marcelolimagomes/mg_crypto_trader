@@ -261,7 +261,7 @@ def register_operation(client: Client, params):
             err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
             log.error(err_msg)
             sm.send_status_to_telegram(err_msg)
-            return None
+            return None, None
         purchase_attemps += 1
         time.sleep(1)
 
