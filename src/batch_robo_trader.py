@@ -1,5 +1,6 @@
 from src.robo_trader_ml import RoboTraderML
-from src.robo_trader_index import RoboTraderIndex
+# from src.robo_trader_index import RoboTraderIndex
+from src.robo_trader_ix_binance import RoboTraderIndex
 
 import src.utils as utils
 import src.calcEMA as calc_utils

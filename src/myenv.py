@@ -41,7 +41,7 @@ symbol = 'BTCUSDT'
 saldo_inicial = 100
 stop_loss_multiplier = 5
 stop_loss_range_multiplier = 7
-default_amount_invested = 100
+default_amount_invested = 25
 initial_amount_balance = 10000
 rows_to_train = 50000
 
@@ -60,3 +60,6 @@ max_rsi = 70
 p_ema = 200
 
 retrain_last_results = 100
+
+asset_balance_currency = 'USDT'
+max_purchase_attemps = 30

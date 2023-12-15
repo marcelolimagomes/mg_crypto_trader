@@ -180,6 +180,7 @@ mlruns/
 ./mlruns
 
 telegram.key
+mg.key
 
 *.pkl
 
