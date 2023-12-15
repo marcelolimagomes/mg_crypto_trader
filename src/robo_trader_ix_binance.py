@@ -193,40 +193,41 @@ class RoboTraderIndex():
         p_ema_label = f'ema_{self._p_ema}p'
 
         error = False
+        balance = utils.get_account_balance(client)  # ok
         actual_price, open_time = self.update_data_from_web()
         while True:
             try:
                 error = False
                 # Update data
-                balance = utils.get_account_balance(client)  # ok
-                actual_price, open_time = self.update_data_from_web()
                 purchased = utils.is_purchased(client, self._symbol)
-                self.log.info(f'balance: {balance} - actual_price: {actual_price} - purchased: {purchased}')
+                self.log.info(f'{self._symbol}_{self._interval} Purchased: {purchased}')
 
-                if (not purchased) and (balance > 5.00):
-                    rsi, p_ema_value = self.feature_engineering_on_loop()
-                    target_margin = self._target_margin
-                    strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
-                    self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - {p_ema_label}: {p_ema_value:.2f}')
-                    if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
-                        purchase_price = actual_price
-                        take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, purchase_price, target_margin, self._stop_loss_multiplier)  # ok
+                if not purchased:
+                    balance = utils.get_account_balance(client)  # ok
+                    if balance > 5.00:
+                        actual_price, open_time = self.update_data_from_web()
+                        rsi, p_ema_value = self.feature_engineering_on_loop()
+                        target_margin = self._target_margin
+                        strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
+                        self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - {p_ema_label}: {p_ema_value:.2f}')
+                        if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
+                            purchase_price = actual_price
+                            take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, purchase_price, target_margin, self._stop_loss_multiplier)  # ok
 
-                        # Lock Thread to register BUY
-                        # self._mutex.acquire()
-                        amount_invested, balance = utils.get_amount_to_invest(client)  # ok
-                        ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
-                                                                   purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance, symbol_precision, price_precision, tick_size, step_size)  # ok
-                        order_buy_id, order_sell_id = utils.register_operation(client, ledger_params)
+                            # Lock Thread to register BUY
+                            # self._mutex.acquire()
+                            amount_invested, balance = utils.get_amount_to_invest(client)  # ok
+                            ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
+                                                                       purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance, symbol_precision, price_precision, tick_size, step_size)  # ok
+                            order_buy_id, order_sell_id = utils.register_operation(client, ledger_params)
 
-                        # self._mutex.release()
-                        # End Lock
+                            # self._mutex.release()
+                            # End Lock
 
-                        self.log_buy(open_time, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
-                        self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
-                                       f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
-                                       f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
-                        continue
+                            self.log_buy(open_time, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
+                            self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
+                                           f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
+                                           f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
 
                 '''
                 if purchased:  # and (operation.startswith('LONG') or operation.startswith('SHORT')):

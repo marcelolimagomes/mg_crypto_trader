@@ -52,7 +52,7 @@ rows_to_index_train = 1000
 
 days_to_validate_train = 90  # Tree months
 
-sleep_refresh = 5  # seconds
+sleep_refresh = 10  # seconds
 
 producao = True
 

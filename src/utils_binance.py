@@ -158,7 +158,7 @@ def calc_take_profit_stop_loss(strategy, actual_value, margin, stop_loss_multipl
     return take_profit_value, stop_loss_value
 
 
-def get_precision(tick_size: float):
+def get_precision(tick_size: float) -> int:
     result = 8
     if tick_size >= 1.0:
         result = 0
@@ -239,6 +239,7 @@ def is_buying(client: Client, symbol):
 
 
 def register_operation(client: Client, params):
+    log.warn(f'register_operation: Params> {params}')
     price_order = client.get_symbol_ticker(symbol=params['symbol'])
 
     price = round(float(price_order['price']), params['symbol_precision'])
@@ -249,7 +250,7 @@ def register_operation(client: Client, params):
     order_buy_id = None
     order_buy_id = client.order_limit_buy(symbol=params['symbol'], quantity=quantity, price=str(price))
     info_msg = f'ORDER BUY: symbol: {params["symbol"]} - {price_order} - quantity: {quantity}'
-    log.info(info_msg)
+    log.warn(info_msg)
     sm.send_to_telegram(info_msg)
     log.info(f'order_buy_id: {order_buy_id}')
 
@@ -270,7 +271,9 @@ def register_operation(client: Client, params):
 
 
 def register_oco_sell(client: Client, params):
-    price_precision = get_precision(float(params['price_precision']))
+    log.warn(f'register_oco_sell: Params> {params}')
+    price_precision = params['price_precision']
+    step_size_precision = get_precision(float(params['step_size']))
     take_profit = round(float(params['take_profit']), price_precision)
     stop_loss_target = round(float(params['stop_loss']), price_precision)
     stop_loss_trigger = round(stop_loss_target * 1.05, price_precision)
@@ -278,14 +281,14 @@ def register_oco_sell(client: Client, params):
 
     filled_asset_balance = client.get_asset_balance(params['symbol'].split('USDT')[0])
     int_quantity = filled_asset_balance['free'].split('.')[0]
-    frac_quantity = filled_asset_balance['free'].split('.')[1][:price_precision + 1]
+    frac_quantity = filled_asset_balance['free'].split('.')[1][:step_size_precision]
     quantity = float(int_quantity + '.' + frac_quantity)
 
     oder_oco_sell_id = None
     oder_oco_sell_id = client.order_oco_sell(symbol=params['symbol'], quantity=quantity, price=str(take_profit), stopPrice=str(stop_loss_trigger), stopLimitPrice=str(stop_loss_target), stopLimitTimeInForce='GTC')
 
     info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} price_precision: {price_precision} quantity: {quantity} take_profit: {take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger}'
-    log.info(info_msg)
+    log.warn(info_msg)
     sm.send_to_telegram(info_msg)
 
     log.info(f'oder_oco_sell_id: {oder_oco_sell_id}')
