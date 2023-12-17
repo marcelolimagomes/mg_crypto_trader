@@ -76,11 +76,11 @@ class RoboTraderIndex():
                 _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
 
         if purchased:
-            msg = f'[BINANCE]*PURCHASED*: S: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% '
+            msg = f'[BINANCE]*PURCHASED*: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% '
             msg += f'- PP: $ {purchase_price:.6f} - AP: $ {actual_price:.6f} - MO: {100*margin_operation:.2f}% - AI: $ {amount_invested:.2f} '
             msg += f'- PnL: $ {profit_and_loss:.2f} - TP: $ {take_profit:.6f} - SL: $ {stop_loss:.6f} - B: $ {balance:.2f}'
         else:
-            msg = f'[BINANCE]*NOT PURCHASED*: S: {self._symbol}_{self._interval} - OT: {_open_time} - AP: $ {actual_price:.6f} - B: $ {balance:.2f}'
+            msg = f'[BINANCE]*NOT PURCHASED*: {self._symbol}_{self._interval} - OT: {_open_time} - AP: $ {actual_price:.6f} - B: $ {balance:.2f}'
         self.log.info(f'{msg}')
         sm.send_status_to_telegram(msg)
 
@@ -96,7 +96,7 @@ class RoboTraderIndex():
         if restored:
             status = '-RESTORED'
 
-        msg = f'[BINANCE]*BUYING{status}*: S: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% - '
+        msg = f'[BINANCE]*BUYING{status}*: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% - '
         msg += f'PP: $ {purchase_price:.6f} - AI: $ {amount_invested:.2f} - TP: $ {take_profit:.6f} - '
         msg += f'SL: $ {stop_loss:.6f} - RSI: {rsi:.2f} - B: $ {balance:.2f}'
         self.log.info(f'{msg}')
@@ -112,7 +112,7 @@ class RoboTraderIndex():
                 _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
 
         sum_pnl = utils.get_sum_pnl()
-        msg = f'[BINANCE]*SELLING*: S: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% '
+        msg = f'[BINANCE]*SELLING*: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% '
         msg += f'- PP: $ {purchase_price:.6f} - AP: $ {actual_price:.6f} - MO: {100*margin_operation:.2f}% - AI: $ {amount_invested:.2f} '
         msg += f'- TP: $ {take_profit:.6f} - SL: $ {stop_loss:.6f} - RSI: {rsi:.2f} - B: $ {balance:.2f} - PnL O: $ {profit_and_loss:.2f} - Sum PnL: $ {sum_pnl:.2f}'
         self.log.info(f'{msg}')
@@ -193,21 +193,20 @@ class RoboTraderIndex():
         p_ema_label = f'ema_{self._p_ema}p'
 
         error = False
+        global balance
         balance = utils.get_account_balance(client)  # ok
-        actual_price, open_time = self.update_data_from_web()
+        target_margin = self._target_margin        
         while True:
             try:
                 error = False
                 # Update data
+                actual_price, open_time = self.update_data_from_web()
+                rsi, p_ema_value = self.feature_engineering_on_loop()
                 purchased = utils.is_purchased(client, self._symbol)
-                self.log.info(f'{self._symbol}_{self._interval} Purchased: {purchased}')
-
+                self.log.info(f'{self._symbol}_{self._interval} Purchased: {purchased} - actual_price: {actual_price} - rsi: {rsi} - p_ema: {p_ema_value} - balance: {balance}' )
                 if not purchased:
                     balance = utils.get_account_balance(client)  # ok
                     if balance > 5.00:
-                        actual_price, open_time = self.update_data_from_web()
-                        rsi, p_ema_value = self.feature_engineering_on_loop()
-                        target_margin = self._target_margin
                         strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
                         self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - {p_ema_label}: {p_ema_value:.2f}')
                         if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
