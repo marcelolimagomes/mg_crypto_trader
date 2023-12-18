@@ -1185,6 +1185,91 @@ def calc_take_profit_stop_loss(strategy, actual_value, margin, stop_loss_multipl
     return take_profit_value, stop_loss_value
 
 
+def simule_index_trading2(_data: pd.DataFrame, range_p_ema_ini, range_p_ema_end, range_min_rsi, range_max_rsi, target_margin_list, start_amount_invested=100):
+    margin_operation = 0.0
+    count = 0
+    r = {}
+
+    # Init values
+    for p_ema in range(range_p_ema_ini, range_p_ema_end + 1, 25):
+        for min_rsi in range(range_min_rsi, 36 + 1, 2):
+            for max_rsi in range(72, range_max_rsi + 1, 2):
+                ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
+                _data[ix_predict] = np.where((_data['close'] > _data[f'ema_{p_ema}p']) & (_data['rsi'] >= max_rsi), 'SHORT', np.where((_data['close'] < _data[f'ema_{p_ema}p']) & (_data['rsi'] <= min_rsi), 'LONG', 'ESTAVEL'))
+                for target_margin in target_margin_list:
+                    for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                        count += 1
+                        ix = f'{target_margin}_{p_ema}_{min_rsi}_{max_rsi}_{stop_loss_multiplier}'
+                        r[f'{ix}_purchased'] = False
+                        r[f'{ix}_perform_sell'] = False
+                        r[f'{ix}_purchase_price'] = 0.0
+                        r[f'{ix}_purchase_strategy'] = ''
+                        r[f'{ix}_start_amount_invested'] = start_amount_invested
+
+    # Simulate
+    for _, row in _data.iterrows():
+        count += 1
+        if count % 100 == 0:
+            print(f'count: {count}')
+        actual_price = row['close']
+        rsi = row['rsi']
+        p_ema_value = row[f'ema_{p_ema}p']
+        open_time = row['open_time']
+        if isinstance(open_time, np.datetime64):
+            _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
+        for p_ema in range(range_p_ema_ini, range_p_ema_end + 1, 25):
+            for min_rsi in range(range_min_rsi, 36 + 1, 2):
+                for max_rsi in range(72, range_max_rsi + 1, 2):
+                    ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
+                    strategy = row[ix_predict]
+                    for target_margin in target_margin_list:
+                        for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                            ix = f'{target_margin}_{p_ema}_{min_rsi}_{max_rsi}_{stop_loss_multiplier}'
+                            if not r[f'{ix}_purchased']:
+                                if strategy.startswith('LONG') or strategy.startswith('SHORT'):  # If true, BUY
+                                    r[f'{ix}_purchased'] = True
+                                    r[f'{ix}_purchase_price'] = actual_price
+                                    r[f'{ix}_purchase_strategy'] = strategy
+                                    r[f'{ix}_take_profit'], r[f'{ix}_stop_loss'] = calc_take_profit_stop_loss(strategy, r[f'{ix}_purchase_price'], target_margin, stop_loss_multiplier)
+                                    log.debug(f"BUY[{_open_time,}]: {r[f'{ix}_purchase_strategy']} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - Take Profit: \
+{r[f'{ix}_take_profit']:.2f} - Stop Loss: {r[f'{ix}_stop_loss']:.2f} - RSI: {rsi:.2f}% - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi}% - Max RSI: {max_rsi}% - Stop Loss Multiplier: {stop_loss_multiplier}")
+                                    continue
+
+                            if r[f'{ix}_purchased']:  # and (operation.startswith('LONG') or operation.startswith('SHORT')):
+                                # print(f'[{row_nu}][{strategy}] => Purchased: {purchased} - Price: {actual_price:.6f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Min RSI: {min_rsi} - Max RSI: {max_rsi}')
+                                if r[f'{ix}_purchase_strategy'].startswith('LONG'):
+                                    margin_operation = (actual_price - r[f'{ix}_purchase_price']) / r[f'{ix}_purchase_price']
+                                    if ((actual_price >= r[f'{ix}_take_profit']) or (actual_price <= r[f'{ix}_stop_loss'])):  # Long ==> Sell - Take Profit / Stop Loss
+                                        r[f'{ix}_perform_sell'] = True
+                                elif r[f'{ix}_purchase_strategy'].startswith('SHORT'):
+                                    margin_operation = (r[f'{ix}_purchase_price'] - actual_price) / r[f'{ix}_purchase_price']
+                                    if ((actual_price <= r[f'{ix}_take_profit']) or (actual_price >= r[f'{ix}_stop_loss'])):  # Short ==> Sell - Take Profit / Stop Loss
+                                        r[f'{ix}_perform_sell'] = True
+
+                                if r[f'{ix}_perform_sell']:
+                                    r[f'{ix}_start_amount_invested'] = (1 + margin_operation) * r[f'{ix}_start_amount_invested']
+                                    log.debug(f"SELL[{_open_time}]: {r[f'{ix}_purchase_strategy']} - Price: {actual_price:.6f} - Purchase Price: {r[f'{ix}_purchase_price']:.6f} - Target Margin: {target_margin:.2f}% - Margin Operation:\
+{margin_operation*100:.2f}% - Take Profit: {r[f'{ix}_take_profit']:.2f} - Stop Loss: {r[f'{ix}_stop_loss']:.2f} - RSI: {rsi:.2f} - ema_{p_ema}p: {p_ema_value:.2f} - Sum PnL: {r[f'{ix}_start_amount_invested']:.2f}  - Stop Loss Multiplier: {stop_loss_multiplier}")
+                                    r[f'{ix}_perform_sell'] = False
+                                    r[f'{ix}_purchase_strategy'] = ''
+                                    r[f'{ix}_purchased'] = False
+
+    # process result
+    symbol_result = {}
+    for target_margin in target_margin_list:
+        for p_ema in range(range_p_ema_ini, range_p_ema_end + 1, 25):
+            for min_rsi in range(range_min_rsi, 36 + 1, 2):
+                for max_rsi in range(72, range_max_rsi + 1, 2):
+                    ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
+                    for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                        ix = f'{target_margin}_{p_ema}_{min_rsi}_{max_rsi}_{stop_loss_multiplier}'
+                        symbol_result[ix] = {'target_margin': target_margin, 'p_ema': p_ema, 'min_rsi': min_rsi, 'max_rsi': max_rsi, 'stop_loss_multiplier': stop_loss_multiplier}
+                        print(f"{ix} - Result Simule Trading: {r[f'{ix}_start_amount_invested']:.2f}")
+    return symbol_result
+
+
 def simule_index_trading(_data: pd.DataFrame, symbol, interval, p_ema: int, start_amount_invested=100, target_margin=myenv.stop_loss, min_rsi=myenv.min_rsi, max_rsi=myenv.max_rsi, stop_loss_multiplier=myenv.stop_loss_multiplier):
     purchased = False
     perform_sell = False
@@ -1295,7 +1380,10 @@ def save_index_results(df_result_simulation, symbol, interval, target_margin, p_
     return new_df_result_simulation
 
 
-def finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
+
+def finalize_index_train2(_data: pd.DataFrame, range_p_ema_ini, range_p_ema_end, range_min_rsi, range_max_rsi, target_margin_list, start_amount_invested=100):
+
+def finalize_index_train2(train_param, lock, df_result_simulation_list, count=1):
     result = 'SUCESS'
     try:
         pnl = simule_index_trading(
@@ -1310,7 +1398,7 @@ def finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
           train_param['stop_loss_multiplier'])
 
         ix_symbol = f'{train_param["symbol"]}_{train_param["interval"]}'
-        save = (count % 1000 == 0)  # Save results every 5000 iterations
+        save = (count % 1000 == 0)  # Save results every 1000 iterations
 
         lock.acquire()  # Lock Thread to register results
         df_result_simulation_list[ix_symbol] = save_index_results(

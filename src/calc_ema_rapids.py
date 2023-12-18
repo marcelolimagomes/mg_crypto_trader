@@ -129,8 +129,8 @@ def calc_RSI(df: pd.DataFrame, close_price='close', window=14, fillna=False, las
                 df['change'] = df[close_price].diff()
                 df['gain'] = df.change.mask(df.change < 0, 0.0)
                 df['loss'] = -df.change.mask(df.change > 0, -0.0)
-                df['avg_gain'] = rma(df.gain.to_numpy(), window)
-                df['avg_loss'] = rma(df.loss.to_numpy(), window)
+                df['avg_gain'] = rma(np.asarray(df['gain']), window)
+                df['avg_loss'] = rma(np.asarray(df['loss']), window)
 
                 df['rs'] = df.avg_gain / df.avg_loss
                 df['rsi'] = 100 - (100 / (1 + df.rs))
