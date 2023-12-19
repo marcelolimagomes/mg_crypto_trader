@@ -216,7 +216,7 @@ def get_account_balance(asset=myenv.asset_balance_currency):
 
 
 def get_amount_to_invest():
-    balance = get_account_balance(client)
+    balance = get_account_balance()
     amount_invested = 0.0
 
     if balance < 5.00:
@@ -262,12 +262,18 @@ def register_operation(params):
     amount = params['amount_invested']
     quantity_precision = get_precision(params['step_size'])
     quantity = round(amount / price, quantity_precision)
-    order_buy_id = None
-    order_buy_id = get_client().order_limit_buy(symbol=params['symbol'], quantity=quantity, price=str(price), newClientOrderId=new_client_order_id)
-    info_msg = f'ORDER BUY: symbol: {new_client_order_id} - {price_order} - quantity: {quantity} - order_buy_id: {order_buy_id}'
+
+    oder_params = {}
+    oder_params['symbol'] = params['symbol']
+    oder_params['quantity'] = quantity
+    oder_params['price'] = str(price)
+    oder_params['newClientOrderId'] = new_client_order_id
+    info_msg = f'ORDER BUY: {oder_params}'
     log.warn(info_msg)
-    sm.send_status_to_telegram(info_msg)
-    log.info(f'order_buy_id: {order_buy_id}')
+
+    order_buy_id = get_client().order_limit_buy(**oder_params)
+    sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
+    log.warn(f'order_buy_id: {order_buy_id}')
 
     purchase_attemps = 0
     while is_buying(params["symbol"], params["interval"]):
@@ -292,31 +298,29 @@ def register_oco_sell(params):
     price_precision = params['price_precision']
     step_size_precision = get_precision(float(params['step_size']))
     take_profit = round(float(params['take_profit']), price_precision)
-    stop_loss_target = round(float(params['stop_loss']), price_precision)
-    stop_loss_trigger = round(stop_loss_target * 1.05, price_precision)
-    purchase_price = params['purchase_price']
+    stop_loss_trigger = round(float(params['stop_loss']), price_precision)
+    stop_loss_target = round(stop_loss_trigger * 0.995, price_precision)
 
     filled_asset_balance = get_client().get_asset_balance(params['symbol'].split('USDT')[0])
     int_quantity = filled_asset_balance['free'].split('.')[0]
     frac_quantity = filled_asset_balance['free'].split('.')[1][:step_size_precision]
     quantity = float(int_quantity + '.' + frac_quantity)
 
-    oder_oco_sell_id = None
-    oder_oco_sell_id = get_client().order_oco_sell(
-        symbol=params['symbol'],
-        quantity=quantity,
-        price=str(take_profit),
-        stopPrice=str(stop_loss_trigger),
-        stopLimitPrice=str(stop_loss_target),
-        stopLimitTimeInForce='GTC',
-        limitClientOrderId=limit_client_order_id,
-        stopClientOrderId=stop_client_order_id)
+    oco_params = {}
+    oco_params['symbol'] = params['symbol']
+    oco_params['quantity'] = quantity
+    oco_params['price'] = str(take_profit)
+    oco_params['stopPrice'] = str(stop_loss_trigger)
+    oco_params['stopLimitPrice'] = str(stop_loss_target)
+    oco_params['stopLimitTimeInForce'] = 'GTC'
+    oco_params['limitClientOrderId'] = limit_client_order_id
+    oco_params['stopClientOrderId'] = stop_client_order_id
 
-    info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} price_precision: {price_precision} quantity: {quantity} take_profit: \
-{take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger} limit_client_order_id: {limit_client_order_id} stop_client_order_id: {stop_client_order_id}'
+    info_msg = f'ORDER SELL: {oco_params}'
     log.warn(info_msg)
     sm.send_to_telegram(info_msg)
-    sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
 
-    log.info(f'oder_oco_sell_id: {oder_oco_sell_id}')
+    oder_oco_sell_id = get_client().order_oco_sell(**oco_params)
+    sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
+    log.warn(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id

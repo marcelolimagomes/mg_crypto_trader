@@ -212,19 +212,18 @@ class RoboTraderIndex():
                             take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, purchase_price, target_margin, self._stop_loss_multiplier)  # ok
 
                             # Lock Thread to register BUY
-                            # self._mutex.acquire()
+                            self._mutex.acquire()
                             amount_invested, balance = utils.get_amount_to_invest()  # ok
-                            ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
-                                                                       purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance, symbol_precision, price_precision, tick_size, step_size)  # ok
-                            order_buy_id, order_sell_id = utils.register_operation(ledger_params)
-
-                            # self._mutex.release()
+                            if amount_invested > 0.0:
+                                ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
+                                                                           purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance, symbol_precision, price_precision, tick_size, step_size)  # ok
+                                order_buy_id, order_sell_id = utils.register_operation(ledger_params)
+                                self.log_buy(open_time, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
+                                self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
+                                               f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
+                                               f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
+                            self._mutex.release()
                             # End Lock
-
-                            self.log_buy(open_time, strategy, purchase_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi)
-                            self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
-                                           f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
-                                           f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
 
                 '''
                 if purchased:  # and (operation.startswith('LONG') or operation.startswith('SHORT')):
