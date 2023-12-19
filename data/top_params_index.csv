@@ -1,22 +1,22 @@
-data;symbol;interval;target_margin;p_ema;min_rsi;max_rsi;amount_invested;stop_loss_multiplier;pnl;arguments
-2023-11-26 21:49:33;ADAUSDT;15m;4.0;100;36;80;100.0;6;260.32;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 00:05:16;ATOMUSDT;15m;4.0;175;36;74;100.0;4;195.41;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 08:51:27;AVAXUSDT;15m;4.5;50;36;80;100.0;4;277.29;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 19:32:10;BCHUSDT;30m;3.5;100;30;80;100.0;5;199.11;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=30m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 01:58:28;BNBUSDT;1m;3.0;100;36;72;100.0;2;222.76;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-28 00:50:35;BTCUSDT;1m;1.5;200;36;80;100.0;6;177.21;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 12:59:06;DOGEUSDT;5m;5.0;225;34;78;100.0;5;226.72;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=5m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 11:16:17;DOTUSDT;5m;4.0;200;36;76;100.0;3;195.7;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=5m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 19:27:30;DYDXUSDT;30m;2.0;100;36;72;100.0;5;316.04;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=30m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 00:16:58;ETHUSDT;15m;5.0;175;30;78;100.0;2;166.37;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-28 16:20:49;GASUSDT;1m;5.0;75;36;80;100.0;6;307.71;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-28 10:27:29;LINKUSDT;1m;1.5;50;30;78;100.0;6;396.01;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 20:07:34;LTCUSDT;30m;5.0;175;34;72;100.0;3;205.97;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=30m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-28 06:12:41;MATICUSDT;1m;4.5;225;30;80;100.0;2;270.19;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 01:32:21;SOLUSDT;15m;3.0;225;36;78;100.0;4;255.61;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 14:49:59;TRBUSDT;5m;2.0;50;36;76;100.0;6;1296.38;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=5m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 19:03:42;UNIUSDT;1m;2.5;150;34;80;100.0;4;307.75;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 21:01:29;WLDUSDT;30m;5.0;50;36;76;100.0;6;460.77;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=30m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 22:38:30;XLMUSDT;15m;4.5;125;36;76;100.0;2;265.25;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=15m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-27 17:47:12;XMRUSDT;1m;1.0;150;28;76;100.0;2;211.15;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=1m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
-2023-11-26 20:52:08;XRPUSDT;30m;2.0;50;34;80;100.0;7;188.72;['-batch-training', '-calc-rsi', '-verbose', '-prediction-mode=index', '-interval-list=30m', '-range-min-rsi=28', '-range-max-rsi=80', '-range-p-ema=50,250', '-target-margin-list=1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0', '-log-level=WARNING']
+date;symbol;interval;target_margin;p_ema;min_rsi;max_rsi;amount_invested;stop_loss_multiplier;pnl
+2023-12-18 20:49:10;ADAUSDT;15m;4.5;100;36;68;100.0;4;323.69
+2023-12-18 21:00:54;ATOMUSDT;5m;2.0;250;52;68;100.0;6;254.1
+2023-12-18 20:49:03;AVAXUSDT;15m;4.5;75;48;68;100.0;2;560.4
+2023-12-18 20:58:01;BCHUSDT;5m;1.0;100;58;68;100.0;2;193.94
+2023-12-18 20:58:03;BNBUSDT;5m;1.0;250;30;68;100.0;7;180.57
+2023-12-18 21:39:05;BTCUSDT;1m;4.5;100;42;68;100.0;2;177.44
+2023-12-18 21:39:39;DOGEUSDT;1m;2.0;225;58;68;100.0;2;262.73
+2023-12-18 20:49:15;DOTUSDT;15m;3.0;125;32;68;100.0;5;256.35
+2023-12-18 21:00:57;DYDXUSDT;5m;1.0;100;44;68;100.0;6;315.33
+2023-12-18 20:49:19;ETHUSDT;15m;4.5;150;30;68;100.0;3;157.01
+2023-12-18 21:55:33;GASUSDT;1m;5.0;175;32;68;100.0;7;591.83
+2023-12-18 21:40:00;LINKUSDT;1m;2.5;250;34;68;100.0;2;353.69
+2023-12-18 20:58:01;LTCUSDT;5m;1.0;100;36;68;100.0;2;178.78
+2023-12-18 20:49:18;MATICUSDT;15m;4.5;100;36;68;100.0;3;238.8
+2023-12-18 21:39:06;SOLUSDT;1m;4.0;75;38;68;100.0;2;443.49
+2023-12-18 21:55:27;TRBUSDT;1m;3.5;100;28;68;100.0;7;688.7
+2023-12-18 21:01:02;UNIUSDT;5m;1.0;125;38;68;100.0;5;236.44
+2023-12-18 20:50:15;WLDUSDT;15m;4.0;150;48;68;100.0;4;508.29
+2023-12-18 20:57:58;XLMUSDT;5m;1.0;50;38;68;100.0;3;198.21
+2023-12-18 20:46:25;XMRUSDT;30m;1.0;50;40;68;100.0;3;179.11
+2023-12-18 20:57:55;XRPUSDT;5m;4.0;100;28;68;100.0;4;210.09

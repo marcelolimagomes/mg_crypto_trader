@@ -11,7 +11,6 @@ import time
 import src.calcEMA as calc_utils
 import os
 import logging
-from binance.client import Client
 
 
 class RoboTraderIndex():
@@ -173,8 +172,7 @@ class RoboTraderIndex():
         self.log.info(f'Start _feature_engineering...')
         self._feature_engineering()
 
-        client = utils.login_binance()
-        symbol_info, symbol_precision, price_precision, step_size, tick_size = utils.get_symbol_info(client, self._symbol)
+        _, symbol_precision, price_precision, step_size, tick_size = utils.get_symbol_info(self._symbol)
 
         cont = 0
         cont_aviso = 101
@@ -194,18 +192,18 @@ class RoboTraderIndex():
 
         error = False
         global balance
-        balance = utils.get_account_balance(client)  # ok
-        target_margin = self._target_margin        
+        balance = utils.get_account_balance()  # ok
+        target_margin = self._target_margin
         while True:
             try:
                 error = False
                 # Update data
                 actual_price, open_time = self.update_data_from_web()
                 rsi, p_ema_value = self.feature_engineering_on_loop()
-                purchased = utils.is_purchased(client, self._symbol)
-                self.log.info(f'{self._symbol}_{self._interval} Purchased: {purchased} - actual_price: {actual_price} - rsi: {rsi} - p_ema: {p_ema_value} - balance: {balance}' )
+                purchased = utils.is_purchased(self._symbol, self._interval)
+                self.log.info(f'{self._symbol}_{self._interval} Purchased: {purchased} - actual_price: {actual_price} - rsi: {rsi} - p_ema: {p_ema_value} - balance: {balance}')
                 if not purchased:
-                    balance = utils.get_account_balance(client)  # ok
+                    balance = utils.get_account_balance()  # ok
                     if balance > 5.00:
                         strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
                         self.log.info(f'Predicted Strategy: {strategy} - Price: {actual_price:.6f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f} - {p_ema_label}: {p_ema_value:.2f}')
@@ -215,10 +213,10 @@ class RoboTraderIndex():
 
                             # Lock Thread to register BUY
                             # self._mutex.acquire()
-                            amount_invested, balance = utils.get_amount_to_invest(client)  # ok
+                            amount_invested, balance = utils.get_amount_to_invest()  # ok
                             ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
                                                                        purchase_price, rsi, 0.0, 0.0, 0.0, strategy, balance, symbol_precision, price_precision, tick_size, step_size)  # ok
-                            order_buy_id, order_sell_id = utils.register_operation(client, ledger_params)
+                            order_buy_id, order_sell_id = utils.register_operation(ledger_params)
 
                             # self._mutex.release()
                             # End Lock

@@ -1,6 +1,6 @@
 from src.train_best_model import TrainBestModel
 from src.batch_train_ml import BatchTrainML
-from src.batch_train_index import BatchTrainIndex
+from src.batch_train_index2 import BatchTrainIndex
 from src.utils import *
 
 import src.myenv as myenv

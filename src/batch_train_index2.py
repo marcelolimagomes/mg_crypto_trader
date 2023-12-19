@@ -1,17 +1,11 @@
-# from src.train_index import TrainIndex
-
 import src.utils as utils
 import src.calcEMA as calc_utils
 import src.myenv as myenv
 import src.send_message as sm
 import logging
 import pandas as pd
-import datetime
 import numpy as np
-import sys
-import threading
 from multiprocessing import Process, Lock, Pool, Manager
-import time
 import os
 import traceback
 
@@ -151,47 +145,45 @@ class BatchTrainIndex:
         self._data_preprocessing()
         self.log.info(f'{self.pl}: Start Running...')
 
-        with Pool(processes=(os.cpu_count())) as pool:
-            manager = Manager()
-            df_result_simulation_list = manager.dict()
-            lock = manager.Lock()
-
+        # os.cpu_count()
+        with Pool(processes=os.cpu_count()) as pool:
             self.log.info(f'{self.pl}: Total Trainning Models: {len(self._params_list)}')
             self.log.info(f'{self.pl}: Will Start {len(self._params_list)} Threads.')
-            self._params_list = sorted(self._params_list, key=lambda p: (str(p['p_ema']), str(p['target_margin']), str(p['max_rsi']), str(p['min_rsi']), str(p['symbol']), str(p['interval'])))
             process_list = []
             count = 0
             for interval in self._interval_list:
                 for symbol in self._symbol_list:
                     ix_symbol = f'{symbol}_{interval}'
                     p = {}
+                    p['symbol'] = symbol
+                    p['interval'] = interval
                     p['_data'] = self._all_data_list[ix_symbol]
-                    p['range_p_ema_ini'] = self._range_p_ema_ini
-                    p['range_p_ema_end'] = self._range_p_ema_end
-                    p['range_min_rsi'] = self._range_min_rsi
-                    p['range_max_rsi'] = self._range_max_rsi
-                    p['target_margin_list,'] = self._target_margin_list
+                    p['range_p_ema_ini'] = int(self._range_p_ema_ini)
+                    p['range_p_ema_end'] = int(self._range_p_ema_end)
+                    p['range_min_rsi'] = int(self._min_rsi)
+                    p['range_max_rsi'] = int(self._max_rsi)
+                    p['target_margin_list'] = self._target_margin_list
+                    p['start_amount_invested'] = 100.00
 
+                    # _data: pd.DataFrame, range_p_ema_ini, range_p_ema_end, range_min_rsi, range_max_rsi, target_margin_list, start_amount_invested=100
                     try:
-                        process = pool.apply_async(func=utils.finalize_index_train2, kwds=p)
-                        process_list.append({'name': name, 'symbol': p['symbol'], 'interval': p['interval'], 'target_margin': p['target_margin'], 'process': process})
+                        process = pool.apply_async(func=utils.simule_index_trading2, kwds=p)
+                        process_list.append({'name': ix_symbol, 'symbol': symbol, 'interval': interval, 'process': process})
                         count += 1
                     except Exception as e:
                         self.log.exception(e)
                         traceback.print_stack()
 
             self.log.info(f'{self.pl}: Will Start collecting results for {len(self._params_list)} Threads.')
-            results = []
             for p in process_list:
                 try:
                     res = p['process'].get()
-                    results.append(res)
+                    # res = utils.parse_simule_index_trading2(res)
+                    df_result = pd.DataFrame(data=res)
+                    df_result.info()
+                    utils.only_save_index_results(df_result, p['symbol'], p['interval'])
                 except Exception as e:
                     self.log.exception(e)
                     traceback.print_stack()
-                    results.append("TIMEOUT_ERROR")
 
-            self.log.info(f'{self.pl}: Saving Results for all symbols...')
-            utils.save_all_results_index_simulation(df_result_simulation_list)
-            self.log.info(f'{self.pl}: Saved Results for all symbols!')
-            self.log.info(f'{self.pl}: Results of {len(self._params_list)} Models execution: \n{pd.DataFrame(results, columns=["status"])["status"].value_counts()}')
+            self.log.info(f'{self.pl}: Results of {len(self._params_list)} saved!')

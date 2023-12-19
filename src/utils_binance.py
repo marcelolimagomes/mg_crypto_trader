@@ -12,6 +12,17 @@ import src.myenv as myenv
 import src.send_message as sm
 
 log = logging.getLogger()
+client: Client = None
+
+
+def get_client() -> Client:
+    global client
+    if client is None:
+        client = login_binance()
+        log.debug(f'New Instance of Client: {client}')
+        print(f'New Instance of Client: {client}')
+
+    return client
 
 
 def login_binance() -> Client:
@@ -22,8 +33,8 @@ def login_binance() -> Client:
         key = first_line.split('##$$')[0]
         sec = first_line.split('##$$')[1]
 
-    client = Client(key, sec)
-    return client
+    _client = Client(key, sec)
+    return _client
 
 
 def parse_type_fields(df, parse_dates=False):
@@ -81,8 +92,7 @@ def remove_cols_for_klines(columns):
 def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
     # return pd.DataFrame()
     start_time = datetime.now()
-    client = Client()
-    klines = client.get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
+    klines = get_client().get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
 
     columns = remove_cols_for_klines(columns)
 
@@ -179,11 +189,11 @@ def get_precision(tick_size: float) -> int:
     return result
 
 
-def get_symbol_info(client: Client, symbol):
+def get_symbol_info(symbol):
     '''
         return symbol_info, symbol_precision, step_size, tick_size
     '''
-    symbol_info = client.get_symbol_info(symbol=symbol)
+    symbol_info = get_client().get_symbol_info(symbol=symbol)
     symbol_precision = int(symbol_info['baseAssetPrecision'])
     for filter in symbol_info['filters']:
         if filter['filterType'] == 'LOT_SIZE':
@@ -198,14 +208,14 @@ def get_symbol_info(client: Client, symbol):
     return symbol_info, symbol_precision, get_precision(tick_size), step_size, tick_size
 
 
-def get_account_balance(client: Client, asset=myenv.asset_balance_currency):
-    asset_balance = client.get_asset_balance(asset)
+def get_account_balance(asset=myenv.asset_balance_currency):
+    asset_balance = get_client().get_asset_balance(asset)
     balance = float(asset_balance['free'])
 
     return balance
 
 
-def get_amount_to_invest(client: Client):
+def get_amount_to_invest():
     balance = get_account_balance(client)
     amount_invested = 0.0
 
@@ -220,27 +230,32 @@ def get_amount_to_invest(client: Client):
     return amount_invested, balance
 
 
-def is_purchased(client: Client, symbol):
-    orders = client.get_all_orders(symbol=symbol)
+def is_purchased(symbol, interval):
+    id = f'{symbol}_{interval}_limit'
+    orders = get_client().get_all_orders(symbol=symbol)
     for order in orders:
-        # (order['side'] == Client.SIDE_SELL) and \
-        if (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
-            return True
+        if order['clientOrderId'] == id:
+            if (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
+                return True
     return False
 
 
-def is_buying(client: Client, symbol):
-    orders = client.get_all_orders(symbol=symbol)
+def is_buying(symbol, interval):
+    id = f'{symbol}_{interval}_buy'
+    orders = get_client().get_all_orders(symbol=symbol)
     for order in orders:
-        if (order['side'] == Client.SIDE_BUY) and \
-                (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
-            return True
+        if order['clientOrderId'] == id:
+            if (order['side'] == Client.SIDE_BUY) and \
+                    (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
+                return True
     return False
 
 
-def register_operation(client: Client, params):
+def register_operation(params):
     log.warn(f'register_operation: Params> {params}')
-    price_order = client.get_symbol_ticker(symbol=params['symbol'])
+    price_order = get_client().get_symbol_ticker(symbol=params['symbol'])
+    # params['id'] = int(datetime.datetime.now().timestamp() * 1000000)
+    new_client_order_id = f'{params["symbol"]}_{params["interval"]}_buy'
 
     price = round(float(price_order['price']), params['symbol_precision'])
     params['purchase_price'] = price
@@ -248,16 +263,16 @@ def register_operation(client: Client, params):
     quantity_precision = get_precision(params['step_size'])
     quantity = round(amount / price, quantity_precision)
     order_buy_id = None
-    order_buy_id = client.order_limit_buy(symbol=params['symbol'], quantity=quantity, price=str(price))
-    info_msg = f'ORDER BUY: symbol: {params["symbol"]} - {price_order} - quantity: {quantity}'
+    order_buy_id = get_client().order_limit_buy(symbol=params['symbol'], quantity=quantity, price=str(price), newClientOrderId=new_client_order_id)
+    info_msg = f'ORDER BUY: symbol: {new_client_order_id} - {price_order} - quantity: {quantity} - order_buy_id: {order_buy_id}'
     log.warn(info_msg)
-    sm.send_to_telegram(info_msg)
+    sm.send_status_to_telegram(info_msg)
     log.info(f'order_buy_id: {order_buy_id}')
 
     purchase_attemps = 0
-    while is_buying(client, params['symbol']):
+    while is_buying(params["symbol"], params["interval"]):
         if purchase_attemps > myenv.max_purchase_attemps:
-            client._delete('openOrders', True, data={'symbol': params['symbol']})
+            get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
             err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
             log.error(err_msg)
             sm.send_status_to_telegram(err_msg)
@@ -265,13 +280,15 @@ def register_operation(client: Client, params):
         purchase_attemps += 1
         time.sleep(1)
 
-    order_oco_id = register_oco_sell(client, params)
+    order_oco_id = register_oco_sell(params)
 
     return order_buy_id, order_oco_id
 
 
-def register_oco_sell(client: Client, params):
+def register_oco_sell(params):
     log.warn(f'register_oco_sell: Params> {params}')
+    limit_client_order_id = f'{params["symbol"]}_{params["interval"]}_limit'
+    stop_client_order_id = f'{params["symbol"]}_{params["interval"]}_stop'
     price_precision = params['price_precision']
     step_size_precision = get_precision(float(params['step_size']))
     take_profit = round(float(params['take_profit']), price_precision)
@@ -279,17 +296,27 @@ def register_oco_sell(client: Client, params):
     stop_loss_trigger = round(stop_loss_target * 1.05, price_precision)
     purchase_price = params['purchase_price']
 
-    filled_asset_balance = client.get_asset_balance(params['symbol'].split('USDT')[0])
+    filled_asset_balance = get_client().get_asset_balance(params['symbol'].split('USDT')[0])
     int_quantity = filled_asset_balance['free'].split('.')[0]
     frac_quantity = filled_asset_balance['free'].split('.')[1][:step_size_precision]
     quantity = float(int_quantity + '.' + frac_quantity)
 
     oder_oco_sell_id = None
-    oder_oco_sell_id = client.order_oco_sell(symbol=params['symbol'], quantity=quantity, price=str(take_profit), stopPrice=str(stop_loss_trigger), stopLimitPrice=str(stop_loss_target), stopLimitTimeInForce='GTC')
+    oder_oco_sell_id = get_client().order_oco_sell(
+        symbol=params['symbol'],
+        quantity=quantity,
+        price=str(take_profit),
+        stopPrice=str(stop_loss_trigger),
+        stopLimitPrice=str(stop_loss_target),
+        stopLimitTimeInForce='GTC',
+        limitClientOrderId=limit_client_order_id,
+        stopClientOrderId=stop_client_order_id)
 
-    info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} price_precision: {price_precision} quantity: {quantity} take_profit: {take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger}'
+    info_msg = f'ORDER SELL: symbol: {params["symbol"]} purchase_price: {purchase_price} price_precision: {price_precision} quantity: {quantity} take_profit: \
+{take_profit} stop_loss_target: {stop_loss_target} stop_loss_trigger: {stop_loss_trigger} limit_client_order_id: {limit_client_order_id} stop_client_order_id: {stop_client_order_id}'
     log.warn(info_msg)
     sm.send_to_telegram(info_msg)
+    sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
 
     log.info(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id
