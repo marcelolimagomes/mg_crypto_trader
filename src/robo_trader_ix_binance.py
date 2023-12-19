@@ -212,7 +212,7 @@ class RoboTraderIndex():
                             take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, purchase_price, target_margin, self._stop_loss_multiplier)  # ok
 
                             # Lock Thread to register BUY
-                            self._mutex.acquire()
+                            # self._mutex.acquire()
                             amount_invested, balance = utils.get_amount_to_invest()  # ok
                             if amount_invested > 0.0:
                                 ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_invested, take_profit, stop_loss,
@@ -222,52 +222,14 @@ class RoboTraderIndex():
                                 self.log.debug(f'\nPerform BUY: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
                                                f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}\n'
                                                f'\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
-                            self._mutex.release()
+                            # self._mutex.release()
                             # End Lock
-
-                '''
-                if purchased:  # and (operation.startswith('LONG') or operation.startswith('SHORT')):
-                    perform_sell = False
-                    if self.is_long(strategy):
-                        margin_operation = (actual_price - purchase_price) / purchase_price
-                        if ((actual_price >= take_profit) or (actual_price <= stop_loss)):  # Long ==> Sell - Take Profit / Stop Loss
-                            perform_sell = True
-                    elif self.is_short(strategy):
-                        margin_operation = (purchase_price - actual_price) / purchase_price
-                        if ((actual_price <= take_profit) or (actual_price >= stop_loss)):  # Short ==> Sell - Take Profit / Stop Loss
-                            perform_sell = True
-
-                    profit_and_loss = amount_invested * margin_operation
-
-                    if perform_sell:  # Register Sell
-                        self.log.debug(f'\nPerform SELL: Strategy: {strategy}\nActual Price: $ {actual_price:.6f}\nPurchased Price: $ {purchase_price:.6f}'
-                                       f'\nAmount Invested: $ {amount_invested:.2f}\nTake Profit: $ {take_profit:.6f}\nStop Loss: $ {stop_loss:.6f}'
-                                       f'\nMargin Operation: {100*margin_operation:.2f}%\nPnL: $ {profit_and_loss:.2f}\nTarget Margin: {target_margin:.2f}%'
-                                       f'\nRSI: {rsi:.2f}\nBalance: $ {balance:.2f}')
-
-                        # Lock Thread to register SELL
-                        self._mutex.acquire()
-                        balance = utils.register_account_balance(amount_invested + profit_and_loss)
-                        ledger_params = utils.get_params_operation(latest_closed_candle_open_time, self._symbol, self._interval, 'SELL', target_margin, amount_invested, take_profit, stop_loss,
-                                                                   purchase_price, rsi, actual_price, profit_and_loss, margin_operation, strategy, balance)
-                        utils.register_operation(ledger_params)
-                        self._mutex.release()
-                        # End Lock
-
-                        self.log_selling(latest_closed_candle_open_time, strategy, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
-                                         take_profit, stop_loss, target_margin, rsi)
-
-                        if profit_and_loss < 0:
-                            time.sleep(60 * 60)  # if pnl is negative, sleep 1h
-
-                        # Reset variables
-                        purchased, purchase_price, amount_invested, take_profit, stop_loss, profit_and_loss, margin_operation, target_margin = (False, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-                '''
             except Exception as e:
                 if self._mutex.locked():
                     self._mutex.release()
-                self.log.exception(e)
-                sm.send_status_to_telegram('ERROR: ' + str(e))
+                err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'
+                self.log.exception(err_msg)
+                sm.send_status_to_telegram(err_msg)
                 error = True
             finally:
                 time.sleep(myenv.sleep_refresh)

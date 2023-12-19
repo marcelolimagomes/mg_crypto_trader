@@ -299,7 +299,7 @@ def register_oco_sell(params):
     step_size_precision = get_precision(float(params['step_size']))
     take_profit = round(float(params['take_profit']), price_precision)
     stop_loss_trigger = round(float(params['stop_loss']), price_precision)
-    stop_loss_target = round(stop_loss_trigger * 0.995, price_precision)
+    stop_loss_target = round(stop_loss_trigger * 0.95, price_precision)
 
     filled_asset_balance = get_client().get_asset_balance(params['symbol'].split('USDT')[0])
     int_quantity = filled_asset_balance['free'].split('.')[0]
@@ -316,7 +316,7 @@ def register_oco_sell(params):
     oco_params['limitClientOrderId'] = limit_client_order_id
     oco_params['stopClientOrderId'] = stop_client_order_id
 
-    info_msg = f'ORDER SELL: {oco_params}'
+    info_msg = f'ORDER SELL: {oco_params} - price_precision: {price_precision} - step_size_precision: {step_size_precision} - filled_asset_balance: {filled_asset_balance}'
     log.warn(info_msg)
     sm.send_to_telegram(info_msg)
 
