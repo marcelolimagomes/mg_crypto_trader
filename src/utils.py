@@ -142,9 +142,9 @@ def get_amount_to_invest(register=True):
     balance = ab.balance
     amount_invested = 0.0
 
-    if balance >= myenv.default_amount_invested:
-        amount_invested = myenv.default_amount_invested
-    elif balance > 0 and balance < myenv.default_amount_invested:
+    if balance >= myenv.default_amount_to_invest:
+        amount_invested = myenv.default_amount_to_invest
+    elif balance > 0 and balance < myenv.default_amount_to_invest:
         amount_invested = balance
     balance -= amount_invested
     if register:
@@ -1424,7 +1424,7 @@ def finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
           train_param['symbol'],
           train_param['interval'],
           train_param['p_ema'],
-          myenv.default_amount_invested,
+          myenv.default_amount_to_invest,
           train_param['target_margin'],
           train_param['min_rsi'],
           train_param['max_rsi'],
@@ -1442,7 +1442,7 @@ def finalize_index_train(train_param, lock, df_result_simulation_list, count=1):
             train_param['p_ema'],
             train_param['min_rsi'],
             train_param['max_rsi'],
-            myenv.default_amount_invested,
+            myenv.default_amount_to_invest,
             pnl,
             train_param['stop_loss_multiplier'],
             train_param['arguments'],

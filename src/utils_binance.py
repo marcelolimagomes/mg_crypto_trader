@@ -106,8 +106,8 @@ def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns
     return df_klines
 
 
-def get_params_operation(operation_date, symbol, interval, operation, target_margin, amount_invested, take_profit, stop_loss, purchase_price, rsi, sell_price,
-                         profit_and_loss, margin_operation, strategy, balance, symbol_precision, price_precision, tick_size, step_size):
+def get_params_operation(operation_date, symbol: str, interval: str, operation: str, target_margin: float, amount_invested: float, take_profit: float, stop_loss: float, purchase_price: float, rsi: float, sell_price: float,
+                         profit_and_loss: float, margin_operation: float, strategy: str, balance: float, symbol_precision: int, quote_precision: int, quantity_precision: int, price_precision: int, step_size: float, tick_size: float):
     params_operation = {'operation_date': datetime.fromtimestamp(int(operation_date.astype(np.int64)) / 1000000000),
                         'symbol': symbol,
                         'interval': interval,
@@ -126,7 +126,9 @@ def get_params_operation(operation_date, symbol, interval, operation, target_mar
                         'symbol_precision': symbol_precision,
                         'price_precision': price_precision,
                         'tick_size': tick_size,
-                        'step_size': step_size
+                        'step_size': step_size,
+                        'quantity_precision': quantity_precision,
+                        'quote_precision': quote_precision,
                         }
     return params_operation
 
@@ -156,7 +158,7 @@ def predict_strategy_index(all_data: pd.DataFrame, p_ema=myenv.p_ema, max_rsi=my
     return result_strategy
 
 
-def calc_take_profit_stop_loss(strategy, actual_value, margin, stop_loss_multiplier=myenv.stop_loss_multiplier):
+def calc_take_profit_stop_loss(strategy, actual_value: float, margin: float, stop_loss_multiplier=myenv.stop_loss_multiplier):
     take_profit_value = 0.0
     stop_loss_value = 0.0
     if strategy.startswith('SHORT'):  # Short
@@ -195,17 +197,25 @@ def get_symbol_info(symbol):
     '''
     symbol_info = get_client().get_symbol_info(symbol=symbol)
     symbol_precision = int(symbol_info['baseAssetPrecision'])
+    quote_precision = int(symbol_info['quoteAssetPrecision'])
     for filter in symbol_info['filters']:
         if filter['filterType'] == 'LOT_SIZE':
+            # stepSize defines the intervals that a quantity/icebergQty can be increased/decreased by
             step_size = float(filter['stepSize'])
         if filter['filterType'] == 'PRICE_FILTER':
+            # tickSize defines the intervals that a price/stopPrice can be increased/decreased by; disabled on tickSize == 0
             tick_size = float(filter['tickSize'])
 
-    symbol_info['mg_step_size'] = step_size
-    symbol_info['mg_symbol_precision'] = symbol_precision
-    symbol_info['mg_tick_size'] = tick_size
+    quantity_precision = get_precision(step_size)
+    price_precision = get_precision(tick_size)
 
-    return symbol_info, symbol_precision, get_precision(tick_size), step_size, tick_size
+    symbol_info['step_size'] = step_size
+    symbol_info['quantity_precision'] = quantity_precision
+    symbol_info['tick_size'] = tick_size
+    symbol_info['price_precision'] = price_precision
+    symbol_info['symbol_precision'] = symbol_precision
+
+    return symbol_info, symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size
 
 
 def get_account_balance(asset=myenv.asset_balance_currency):
@@ -219,25 +229,51 @@ def get_amount_to_invest():
     balance = get_account_balance()
     amount_invested = 0.0
 
-    if balance < 5.00:
-        log.warning(f'Not enough balance: {balance:.2f} USDT')
-    elif balance >= myenv.default_amount_invested:
-        amount_invested = myenv.default_amount_invested
-    elif balance > 0 and balance < myenv.default_amount_invested:
-        amount_invested = balance
-        balance -= amount_invested
+    if balance >= myenv.min_amount_to_invest:
+        if balance >= myenv.default_amount_to_invest:
+            amount_invested = myenv.default_amount_to_invest
+        elif balance > 0 and balance < myenv.default_amount_to_invest:
+            amount_invested = balance
+            # balance -= amount_invested
 
     return amount_invested, balance
 
 
 def is_purchased(symbol, interval):
-    id = f'{symbol}_{interval}_limit'
+    id_buy = f'{symbol}_{interval}_buy'
+    id_limit = f'{symbol}_{interval}_limit'
+    id_stop = f'{symbol}_{interval}_stop'
     orders = get_client().get_all_orders(symbol=symbol)
-    for order in orders:
-        if order['clientOrderId'] == id:
-            if (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
-                return True
-    return False
+
+    res_is_purchased = False
+    purchased_price = 0.0
+    stop_loss = 0.0
+    take_profit = 0.0
+    executed_qty = 0.0
+    amount_invested = 0.0
+    try:
+        df_order = pd.DataFrame(orders)
+        if df_order.shape[0] > 0:
+            key = (df_order['clientOrderId'] == id_buy) | (df_order['clientOrderId'] == id_limit) | (df_order['clientOrderId'] == id_stop)
+            if key.sum() > 0:
+                df_order = df_order[key]
+                res_is_purchased = df_order['status'].isin([Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]).sum() > 0
+                if res_is_purchased:
+                    has_buy = df_order['clientOrderId'] == id_buy
+                    if has_buy.sum() > 0:
+                        purchased_price = float(df_order[has_buy].tail(1)['price'].values[0])
+                        executed_qty = float(df_order[has_buy].tail(1)['executedQty'].values[0])
+                        amount_invested = executed_qty * purchased_price
+                    has_limit = df_order['clientOrderId'] == id_limit
+                    if has_limit.sum() > 0:
+                        take_profit = float(df_order[has_limit].tail(1)['price'].values[0])
+                    has_stop = df_order['clientOrderId'] == id_stop
+                    if has_stop.sum() > 0:
+                        stop_loss = float(df_order[has_stop].tail(1)['stopPrice'].values[0])
+    except Exception as e:
+        log.exception(e)
+        sm.send_status_to_telegram(f'ERROR on call is_purchased({symbol}, {interval}): {e}')
+    return res_is_purchased, purchased_price, amount_invested, take_profit, stop_loss
 
 
 def is_buying(symbol, interval):
@@ -252,26 +288,28 @@ def is_buying(symbol, interval):
 
 
 def register_operation(params):
-    log.warn(f'register_operation: Params> {params}')
-    price_order = get_client().get_symbol_ticker(symbol=params['symbol'])
-    # params['id'] = int(datetime.datetime.now().timestamp() * 1000000)
-    new_client_order_id = f'{params["symbol"]}_{params["interval"]}_buy'
+    log.warn(f'Trying to register order_limit_buy: Params> {params}')
 
-    price = round(float(price_order['price']), params['symbol_precision'])
-    params['purchase_price'] = price
-    amount = params['amount_invested']
-    quantity_precision = get_precision(params['step_size'])
-    quantity = round(amount / price, quantity_precision)
+    symbol = params['symbol']
+    interval = params['interval']
+    new_client_order_id = f'{symbol}_{interval}_buy'
+    quantity_precision = params['quantity_precision']
+    price_precision = params['price_precision']
+    amount_invested = params['amount_invested']
 
-    oder_params = {}
-    oder_params['symbol'] = params['symbol']
-    oder_params['quantity'] = quantity
-    oder_params['price'] = str(price)
-    oder_params['newClientOrderId'] = new_client_order_id
-    info_msg = f'ORDER BUY: {oder_params}'
+    price_order = round(params['purchase_price'], price_precision)  # get_client().get_symbol_ticker(symbol=params['symbol'])
+    quantity = round(amount_invested / price_order, quantity_precision)
+
+    order_params = {}
+    order_params['symbol'] = symbol
+    order_params['quantity'] = quantity
+    order_params['price'] = str(price_order)
+    order_params['newClientOrderId'] = new_client_order_id
+
+    order_buy_id = get_client().order_limit_buy(**order_params)
+
+    info_msg = f'ORDER BUY: {order_params}'
     log.warn(info_msg)
-
-    order_buy_id = get_client().order_limit_buy(**oder_params)
     sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
     log.warn(f'order_buy_id: {order_buy_id}')
 
@@ -291,20 +329,29 @@ def register_operation(params):
     return order_buy_id, order_oco_id
 
 
+def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
+    filled_asset_balance = get_client().get_asset_balance(asset)
+    int_quantity = filled_asset_balance['free'].split('.')[0]
+    frac_quantity = filled_asset_balance['free'].split('.')[1][:quantity_precision]
+    quantity = float(int_quantity + '.' + frac_quantity)
+    return quantity
+
+
 def register_oco_sell(params):
-    log.warn(f'register_oco_sell: Params> {params}')
-    limit_client_order_id = f'{params["symbol"]}_{params["interval"]}_limit'
-    stop_client_order_id = f'{params["symbol"]}_{params["interval"]}_stop'
+    log.warn(f'Trying to register order_oco_sell: Params> {params}')
+
+    symbol = params['symbol']
+    interval = params['interval']
+
+    limit_client_order_id = f'{symbol}_{interval}_limit'
+    stop_client_order_id = f'{symbol}_{interval}_stop'
     price_precision = params['price_precision']
-    step_size_precision = get_precision(float(params['step_size']))
-    take_profit = round(float(params['take_profit']), price_precision)
-    stop_loss_trigger = round(float(params['stop_loss']), price_precision)
+    quantity_precision = params['quantity_precision']
+    take_profit = round(params['take_profit'], price_precision)
+    stop_loss_trigger = round(params['stop_loss'], price_precision)
     stop_loss_target = round(stop_loss_trigger * 0.95, price_precision)
 
-    filled_asset_balance = get_client().get_asset_balance(params['symbol'].split('USDT')[0])
-    int_quantity = filled_asset_balance['free'].split('.')[0]
-    frac_quantity = filled_asset_balance['free'].split('.')[1][:step_size_precision]
-    quantity = float(int_quantity + '.' + frac_quantity)
+    quantity = get_asset_balance(symbol.split('USDT')[0], quantity_precision)
 
     oco_params = {}
     oco_params['symbol'] = params['symbol']
@@ -316,7 +363,7 @@ def register_oco_sell(params):
     oco_params['limitClientOrderId'] = limit_client_order_id
     oco_params['stopClientOrderId'] = stop_client_order_id
 
-    info_msg = f'ORDER SELL: {oco_params} - price_precision: {price_precision} - step_size_precision: {step_size_precision} - filled_asset_balance: {filled_asset_balance}'
+    info_msg = f'ORDER SELL: {symbol}_{interval} - oco_params: {oco_params} - price_precision: {price_precision} - quantity_precision: {quantity_precision}'
     log.warn(info_msg)
     sm.send_to_telegram(info_msg)
 

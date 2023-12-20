@@ -46,7 +46,8 @@ range_max_rsi_start = 68
 
 
 # :::>>>
-default_amount_invested = 20
+default_amount_to_invest = 15.00
+min_amount_to_invest = 5.00
 
 initial_amount_balance = 10000
 rows_to_train = 50000
