@@ -253,7 +253,7 @@ def prepare_best_params_index(pnl_label='pnl'):
 
         df.sort_values(by=[pnl_label, 'min_rsi', 'max_rsi', 'stop_loss_multiplier'], ascending=[True, False, True, False], inplace=True)
         df_aux = df.tail(1)
-        if df_aux['pnl'].values[0] > 150.0:
+        if df_aux['pnl'].values[0] > myenv.min_pnl_to_include_on_best_params:
             df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
     df_top_params.sort_values(by=['symbol', pnl_label, 'min_rsi', 'max_rsi', 'stop_loss_multiplier'], ascending=[True, True, False, True, False], inplace=True)
@@ -311,6 +311,15 @@ def get_symbol_list():
     df = pd.read_csv(myenv.datadir + '/symbol_list.csv')
     for symbol in df['symbol']:
         result.append(symbol)
+    return result
+
+
+def get_symbol_list_best_params_index():
+    result = []
+    df = pd.read_csv(myenv.datadir + '/top_params_index.csv')
+    for symbol in df['symbol']:
+        if symbol not in result:
+            result.append(symbol)
     return result
 
 
@@ -825,12 +834,15 @@ def get_database_name(symbol, interval):
     return f'{myenv.datadir}/{symbol}/{symbol}_{interval}.dat'
 
 
-def download_data(save_database=True, parse_dates=False, interval='1h', tail=-1, start_date='2010-01-01'):
-    symbols = pd.read_csv(myenv.datadir + '/symbol_list.csv')
+def download_data(save_database=True, parse_dates=False, interval='1h', tail=-1, start_date='2010-01-01', only_best_params=False):
+    if only_best_params:
+        symbols = get_symbol_list_best_params_index()
+    else:
+        symbols = get_symbol_list()
     with Pool(processes=(os.cpu_count() * 2)) as pool:
         process_list = []
         results = []
-        for symbol in symbols['symbol']:
+        for symbol in symbols:
             process = pool.apply_async(func=get_data, args=(symbol, save_database, interval, tail, myenv.all_klines_cols, parse_dates, True, start_date))
             process_list.append({'key': f'{symbol}_{interval}', 'process': process})
             # get_data(symbol=symbol, save_database=save_database, interval=interval, tail=tail, columns=myenv.all_klines_cols, parse_dates=parse_dates, start_date=start_date)

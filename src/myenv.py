@@ -46,8 +46,10 @@ range_max_rsi_start = 68
 
 
 # :::>>>
-default_amount_to_invest = 15.00
+default_amount_to_invest = 10.00
 min_amount_to_invest = 5.00
+
+min_pnl_to_include_on_best_params = 200.0
 
 initial_amount_balance = 10000
 rows_to_train = 50000
@@ -56,7 +58,7 @@ rows_to_index_train = 1000
 
 days_to_validate_train = 90  # Tree months
 
-sleep_refresh = 10  # seconds
+sleep_refresh = 5  # seconds
 
 producao = True
 

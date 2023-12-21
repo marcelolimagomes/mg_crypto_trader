@@ -1,7 +1,4 @@
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
-
-from src.models import models
+from binance import ThreadedWebsocketManager
 import src.utils_binance as utils
 import src.myenv as myenv
 import src.send_message as sm
@@ -11,6 +8,8 @@ import time
 import src.calcEMA as calc_utils
 import os
 import logging
+import threading
+
 
 # global
 balance: float = 0.0
@@ -18,15 +17,16 @@ balance: float = 0.0
 
 class RoboTraderIndex():
     def __init__(self, params: dict):
-        # print('ROBO TRADER >>>>>>> ', params)
         self._params = params
-        self._all_data = {}
-        self._all_data = params['all_data'].copy()
+        self._all_data: pd.DataFrame = params['all_data']
+        self._all_cols = params['all_data'].columns
+
+        # self._twm = params['twm']
 
         # Single arguments
         self._symbol = params['symbol']
         self._interval = params['interval']
-        self._mutex = params['mutex']
+        self._mutex = threading.Lock()
 
         # List arguments
         self._start_date = params['start_date']
@@ -45,6 +45,8 @@ class RoboTraderIndex():
             self.log = self._configure_log(params['log_level'])
         else:
             self.log = self._configure_log(myenv.log_level)
+
+        self.log.debug(f'ROBO TRADER >>>>>>> {params}')
 
         self.ix = f'{self._symbol}_{self._interval}'
         sm.send_status_to_telegram(f'Starting Robo Trader for {self._symbol}_{self._interval}')
@@ -137,44 +139,99 @@ class RoboTraderIndex():
     def _feature_engineering(self):
         return
 
+    def feature_engineering_on_loop(self):
+        self.log.debug(f'Calculating EMA\'s for key {self._symbol}_{self._interval}...')
+        rsi = 0.0
+        p_ema_value = 0.0
+
+        try:
+            p_ema_label = f'ema_{self._p_ema}p'
+            self.log.debug(f'Start Calculating {p_ema_label} and RSI...')
+            self._mutex.acquire()
+            self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[self._p_ema], diff_price=False)
+            self._all_data = calc_utils.calc_RSI(self._all_data)
+            self._mutex.release()
+            self.log.debug(f'After Calculating {p_ema_label} and RSI - all_data.shape: {self._all_data.shape}')
+
+            rsi = float(self._all_data.tail(1)['rsi'].values[0])
+            p_ema_value = float(self._all_data.tail(1)[p_ema_label].values[0])
+        except Exception as e:
+            self.log.error(f'Error on feature_engineering_on_loop: {e}')
+            if self._mutex.locked():
+                self._mutex.release()
+
+        return rsi, p_ema_value
+
     def update_data_from_web(self):
         # self._kline_features
-        df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=myenv.all_klines_cols, parse_dates=True)
+        df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=self._all_cols, parse_dates=True)
 
         self.log.debug(f'df_klines shape: {df_klines.shape}')
         df_klines.info() if self._verbose else None
 
-        self._all_data = pd.concat([self._all_data, df_klines])
-        self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
-        self._all_data.sort_index(inplace=True)
+        try:
+            self._mutex.acquire()
+            self._all_data = pd.concat([self._all_data, df_klines])
+            self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
+            self._all_data.sort_index(inplace=True)
+            self._mutex.release()
+        except Exception as e:
+            self.log.error(f'Error on update_data_from_web: {e}')
+            if self._mutex.locked():
+                self._mutex.release()
+
         self.log.debug(f'Updated - all_data.shape: {self._all_data.shape}')
 
-        now_price = float(df_klines.tail(1)['close'].values[0])
+    def update_data(self):
+        # print(f'update_data: {self._all_data.tail(1).to_dict(orient="records")}')
+        # print(f'update_data: all_data.shape: {self._all_data.shape}')
 
-        latest_closed_candle_open_time = df_klines.iloc[df_klines.shape[0] - 2:df_klines.shape[0] - 1]['open_time'].values[0]
+        now_price = self._all_data.tail(1)['close'].values[0]
+        latest_closed_candle_open_time = self._all_data.iloc[self._all_data.shape[0] - 2:self._all_data.shape[0] - 1]['open_time'].values[0]
+
+        self._all_data.info() if self._verbose else None
+        self.log.debug(f'update_data: df_klines.shape: {self._all_data.shape}')
+
+        self.log.debug(f'update_data: price: ${now_price} - latest_closed_candle_open_time: {latest_closed_candle_open_time}')
         return now_price, latest_closed_candle_open_time
 
-    def feature_engineering_on_loop(self):
-        self.log.debug(f'Calculating EMA\'s for key {self._symbol}_{self._interval}...')
+    def handle_socket_kline(self, msg):
+        try:
+            self.log.debug(f'handle_socket_kline:{msg}')
+            df_klines = utils.parse_kline_from_stream(pd.DataFrame(data=[msg['k']]), maintain_cols=self._all_cols)
+            # print(f'handle_socket_kline.utils.parse_kline_from_stream: {df_klines.to_dict(orient="records")}')
+            df_klines = utils.parse_type_fields(df_klines, parse_dates=True)
+            # print(f'handle_socket_kline.utils.parse_type_fields: {df_klines.to_dict(orient="records")}')
+            df_klines = utils.adjust_index(df_klines)
+            # print(f'handle_socket_kline.utils.adjust_index: {df_klines.to_dict(orient="records")}')
+            df_klines.info() if self._verbose else None
+            self.log.debug(f'handle_socket_kline: df_klines.shape: {df_klines.shape}')
 
-        rsi = 0.0
-        p_ema_value = 0.0
-        p_ema_label = f'ema_{self._p_ema}p'
-        self.log.debug(f'Start Calculating {p_ema_label} and RSI...')
-        self._all_data = calc_utils.calc_ema_periods(self._all_data, periods_of_time=[self._p_ema])
-        self._all_data = calc_utils.calc_RSI(self._all_data)
-        self.log.debug(f'After Calculating {p_ema_label} and RSI - all_data.shape: {self._all_data.shape}')
-
-        rsi = float(self._all_data.tail(1)['rsi'].values[0])
-        p_ema_value = float(self._all_data.tail(1)[p_ema_label].values[0])
-
-        return rsi, p_ema_value
+            self._mutex.acquire()
+            self._all_data = pd.concat([self._all_data, df_klines])
+            # print(f'handle_socket_kline.pd.concat: {self._all_data.tail(1).to_dict(orient="records")}')
+            self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
+            # print(f'handle_socket_kline._all_data.drop_duplicates: {self._all_data.tail(1).to_dict(orient="records")}')
+            self._all_data.sort_index(inplace=True)
+            self._mutex.release()
+            # print(f'handle_socket_kline._all_data.sort_index: {self._all_data.tail(1).to_dict(orient="records")}')
+            # print(f'handle_socket_kline: Updated - all_data.shape: {self._all_data.shape}')
+            self.log.debug(f'handle_socket_kline: Updated - all_data.shape: {self._all_data.shape}')
+        except Exception as e:
+            self.log.error(f'***ERROR*** handle_socket_kline: {e}')
+            sm.send_status_to_telegram(f'{self.ix} ***ERROR*** handle_socket_kline: {e}')
+            if self._mutex.locked():
+                self._mutex.release()
 
     def run(self):
         self.log.info(f'Start _data_preprocessing...')
         self._data_preprocessing()
         self.log.info(f'Start _feature_engineering...')
         self._feature_engineering()
+
+        twm = ThreadedWebsocketManager()
+        twm.start()
+        self.log.info(f'ThreadedWebsocketManager: {twm.start_kline_socket(callback=self.handle_socket_kline, symbol=self._symbol, interval=self._interval)}')
 
         symbol_info, symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size = utils.get_symbol_info(self._symbol)
 
@@ -204,7 +261,7 @@ class RoboTraderIndex():
             try:
                 error = False
                 # Update data
-                actual_price, open_time = self.update_data_from_web()
+                actual_price, open_time = self.update_data()
                 rsi, p_ema_value = self.feature_engineering_on_loop()
                 purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
                 self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
@@ -239,8 +296,8 @@ class RoboTraderIndex():
                     margin_operation = (actual_price - purchase_price) / purchase_price
                     profit_and_loss = actual_price - purchase_price
             except Exception as e:
-                if self._mutex.locked():
-                    self._mutex.release()
+                # if self._mutex.locked():
+                #    self._mutex.release()
                 err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'
                 self.log.exception(err_msg)
                 sm.send_status_to_telegram(err_msg)

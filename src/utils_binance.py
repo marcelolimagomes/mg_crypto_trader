@@ -298,7 +298,9 @@ def register_operation(params):
     amount_invested = params['amount_invested']
 
     price_order = round(params['purchase_price'], price_precision)  # get_client().get_symbol_ticker(symbol=params['symbol'])
+    params['purchase_price'] = price_order
     quantity = round(amount_invested / price_order, quantity_precision)
+    params['quantity'] = quantity
 
     order_params = {}
     order_params['symbol'] = symbol
@@ -351,7 +353,13 @@ def register_oco_sell(params):
     stop_loss_trigger = round(params['stop_loss'], price_precision)
     stop_loss_target = round(stop_loss_trigger * 0.95, price_precision)
 
-    quantity = get_asset_balance(symbol.split('USDT')[0], quantity_precision)
+    _quantity = get_asset_balance(symbol.split('USDT')[0], quantity_precision)
+    if _quantity > round(params['quantity'] * 1.05, quantity_precision):
+        quantity = round(params['quantity'] * 1.05, quantity_precision)
+    elif _quantity >= round(params['quantity'], quantity_precision):
+        quantity = round(params['quantity'], quantity_precision)
+    else:
+        quantity = _quantity
 
     oco_params = {}
     oco_params['symbol'] = params['symbol']
@@ -371,3 +379,33 @@ def register_oco_sell(params):
     sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
     log.warn(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id
+
+
+def parse_kline_from_stream(df_stream_kline: pd.DataFrame, maintain_cols=['open_time', 'close', 'symbol']):
+    rename = {
+     't': 'open_time',  # Kline start time
+     'T': 'close_time',  # Kline close time
+     's': 'symbol',  # Symbol
+     'i': 'interval',  # Interval
+     'f': 'first_trade_id',  # First trade ID
+     'L': 'last_trade_id',  # Last trade ID
+     'o': 'open',  # Open price
+     'c': 'close',  # Close price
+     'h': 'high',  # High price
+     'l': 'low',  # Low price
+     'v': 'base_asset_volume',    # Base asset volume
+     'n': 'number_of_trades',       # Number of trades
+     'x': 'is_closed',     # Is this kline closed?
+     'q': 'quote_asset_volume',  # Quote asset volume
+     'V': 'taker_buy_base_asset_volume',     # Taker buy base asset volume
+     'Q': 'taker_buy_quote_asset_volume',   # Taker buy quote asset volume
+     'B': 'ignore'   # Ignore
+        }
+    df_stream_kline.rename(columns=rename, inplace=True, errors='ignore')
+    del_cols = []
+    for key in df_stream_kline.columns:
+        if key not in maintain_cols:
+            del_cols.append(key)
+
+    df_stream_kline.drop(columns=del_cols, inplace=True, errors='ignore')
+    return df_stream_kline
