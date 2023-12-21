@@ -49,7 +49,7 @@ range_max_rsi_start = 68
 default_amount_to_invest = 10.00
 min_amount_to_invest = 5.00
 
-min_pnl_to_include_on_best_params = 200.0
+min_pnl_to_include_on_best_params = 250.0
 
 initial_amount_balance = 10000
 rows_to_train = 50000
