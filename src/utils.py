@@ -1674,3 +1674,7 @@ def calc_take_profit_stop_loss_index(all_data, target_margin, stop_loss_multipli
     all_data['stop_loss'] = np.where(all_data['strategy'] == 'LONG', all_data['close'] * (1 - (target_margin * stop_loss_multiplier) / 100), all_data['stop_loss'])
 
     return all_data
+
+
+def get_latest_update(data: pd.DataFrame) -> datetime:
+    return pd.to_datetime(data.tail(1)['open_time'].values[0])

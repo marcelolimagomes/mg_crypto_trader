@@ -191,7 +191,7 @@ class BatchRoboTrader:
                 ix_symbol = f'{param["symbol"]}_{param["interval"]}'
                 param['all_data'] = self._all_data_list[ix_symbol]
                 param['start_date'] = self._start_date
-                param['last_data_date'] = self._all_data_list[ix_symbol].tail(1)['open_time'].values[0]
+                param['latest_update'] = utils.get_latest_update(self._all_data_list[ix_symbol])
                 param['calc_rsi'] = True
                 param['verbose'] = self._verbose
                 # params['arguments'] = params['arguments']

@@ -1,4 +1,4 @@
-from binance import Client
+from binance import Client, helpers
 from datetime import datetime, timedelta
 
 import sys
@@ -318,7 +318,8 @@ def register_operation(params):
     purchase_attemps = 0
     while is_buying(params["symbol"], params["interval"]):
         if purchase_attemps > myenv.max_purchase_attemps:
-            get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
+            get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
+            # get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
             err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
             log.error(err_msg)
             sm.send_status_to_telegram(err_msg)
@@ -409,3 +410,41 @@ def parse_kline_from_stream(df_stream_kline: pd.DataFrame, maintain_cols=['open_
 
     df_stream_kline.drop(columns=del_cols, inplace=True, errors='ignore')
     return df_stream_kline
+
+
+def to_periods(delta: datetime, interval='1h'):
+    days = delta.days
+    hours = delta.seconds // 3600
+    minutes = delta.seconds % 3600 // 60
+    total_minutes = (days * 24 * 60) + (hours * 60) + minutes + (delta.seconds // 60)
+
+    resutl = 0
+    match(interval):
+        case '1m':
+            resutl = total_minutes
+        case '5m':
+            resutl = total_minutes // 5
+        case '15m':
+            resutl = total_minutes // 15
+        case '30m':
+            resutl = total_minutes // 30
+        case '1h':
+            resutl = total_minutes // 60
+    return resutl - 1
+
+
+def get_latest_update(data: pd.DataFrame) -> datetime:
+    return pd.to_datetime(data.tail(1)['open_time'].values[0])
+
+
+def has_to_update(data: pd.DataFrame, interval: str):
+    shape = data.shape[0]
+    latest_periods = 0
+    if shape > 2:
+        utcnow = datetime.utcnow()
+        data = data.iloc[shape - 2:shape - 1]  # ignore last row
+        latest_update = get_latest_update(data)
+        delta_update = utcnow - latest_update
+        latest_periods = to_periods(delta_update, interval)
+    log.debug(f'has_to_update>>>>> LOOP({interval}) - utcnow: {utcnow} - latest_update: {latest_update} - delta_update: {delta_update} - latest_periods: {latest_periods}')
+    return latest_periods

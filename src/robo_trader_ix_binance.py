@@ -1,4 +1,6 @@
-from binance import ThreadedWebsocketManager
+from binance import ThreadedWebsocketManager, helpers
+from datetime import datetime
+
 import src.utils_binance as utils
 import src.myenv as myenv
 import src.send_message as sm
@@ -19,7 +21,7 @@ class RoboTraderIndex():
     def __init__(self, params: dict):
         self._params = params
         self._all_data: pd.DataFrame = params['all_data']
-        self._all_cols = params['all_data'].columns
+        self._all_cols = list(params['all_data'].columns)
 
         # self._twm = params['twm']
 
@@ -27,6 +29,7 @@ class RoboTraderIndex():
         self._symbol = params['symbol']
         self._interval = params['interval']
         self._mutex = threading.Lock()
+        self._latest_update: datetime = params['latest_update']
 
         # List arguments
         self._start_date = params['start_date']
@@ -134,7 +137,13 @@ class RoboTraderIndex():
         return strategy.startswith('SHORT')
 
     def _data_preprocessing(self):
-        return
+        utcnow = datetime.utcnow()
+        delta_update = utcnow - self._latest_update
+        latest_periods = utils.to_periods(delta_update, self._interval)
+
+        if latest_periods > 0:
+            self.log.info(f'Updating data: utcnow: {utcnow} - latest_update: {self._latest_update} - delta_update: {delta_update} - latest_periods: {latest_periods}.')
+            self.update_data_from_web(limit=latest_periods + 100)
 
     def _feature_engineering(self):
         return
@@ -162,9 +171,8 @@ class RoboTraderIndex():
 
         return rsi, p_ema_value
 
-    def update_data_from_web(self):
-        # self._kline_features
-        df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=3, columns=self._all_cols, parse_dates=True)
+    def update_data_from_web(self, limit=1000):
+        df_klines = utils.get_klines(symbol=self._symbol, interval=self._interval, max_date=None, limit=limit, columns=self._all_cols, parse_dates=True)
 
         self.log.debug(f'df_klines shape: {df_klines.shape}')
         df_klines.info() if self._verbose else None
@@ -175,6 +183,8 @@ class RoboTraderIndex():
             self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
             self._all_data.sort_index(inplace=True)
             self._mutex.release()
+            self.log.debug(f'update_data_from_web: Updated - all_data.shape: {self._all_data.shape}')
+            self._all_data.info() if self._verbose else None
         except Exception as e:
             self.log.error(f'Error on update_data_from_web: {e}')
             if self._mutex.locked():
@@ -183,9 +193,6 @@ class RoboTraderIndex():
         self.log.debug(f'Updated - all_data.shape: {self._all_data.shape}')
 
     def update_data(self):
-        # print(f'update_data: {self._all_data.tail(1).to_dict(orient="records")}')
-        # print(f'update_data: all_data.shape: {self._all_data.shape}')
-
         now_price = self._all_data.tail(1)['close'].values[0]
         latest_closed_candle_open_time = self._all_data.iloc[self._all_data.shape[0] - 2:self._all_data.shape[0] - 1]['open_time'].values[0]
 
@@ -199,23 +206,16 @@ class RoboTraderIndex():
         try:
             self.log.debug(f'handle_socket_kline:{msg}')
             df_klines = utils.parse_kline_from_stream(pd.DataFrame(data=[msg['k']]), maintain_cols=self._all_cols)
-            # print(f'handle_socket_kline.utils.parse_kline_from_stream: {df_klines.to_dict(orient="records")}')
             df_klines = utils.parse_type_fields(df_klines, parse_dates=True)
-            # print(f'handle_socket_kline.utils.parse_type_fields: {df_klines.to_dict(orient="records")}')
             df_klines = utils.adjust_index(df_klines)
-            # print(f'handle_socket_kline.utils.adjust_index: {df_klines.to_dict(orient="records")}')
             df_klines.info() if self._verbose else None
             self.log.debug(f'handle_socket_kline: df_klines.shape: {df_klines.shape}')
 
             self._mutex.acquire()
             self._all_data = pd.concat([self._all_data, df_klines])
-            # print(f'handle_socket_kline.pd.concat: {self._all_data.tail(1).to_dict(orient="records")}')
             self._all_data.drop_duplicates(keep='last', subset=['open_time'], inplace=True)
-            # print(f'handle_socket_kline._all_data.drop_duplicates: {self._all_data.tail(1).to_dict(orient="records")}')
             self._all_data.sort_index(inplace=True)
             self._mutex.release()
-            # print(f'handle_socket_kline._all_data.sort_index: {self._all_data.tail(1).to_dict(orient="records")}')
-            # print(f'handle_socket_kline: Updated - all_data.shape: {self._all_data.shape}')
             self.log.debug(f'handle_socket_kline: Updated - all_data.shape: {self._all_data.shape}')
         except Exception as e:
             self.log.error(f'***ERROR*** handle_socket_kline: {e}')
@@ -253,13 +253,11 @@ class RoboTraderIndex():
         p_ema_label = f'ema_{self._p_ema}p'
         p_ema_value = 0.0
 
-        error = False
         global balance
         balance = utils.get_account_balance()  # ok
         target_margin = self._target_margin
         while True:
             try:
-                error = False
                 # Update data
                 actual_price, open_time = self.update_data()
                 rsi, p_ema_value = self.feature_engineering_on_loop()
@@ -269,11 +267,9 @@ class RoboTraderIndex():
                     strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
                     self.log.info(f'Predicted Strategy: {strategy} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
                     if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
-                        take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
-                        # Lock Thread to register BUY
-                        # self._mutex.acquire()
                         amount_to_invest, balance = utils.get_amount_to_invest()  # ok
                         if amount_to_invest > myenv.min_amount_to_invest:
+                            take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
                             ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_to_invest,
                                                                        take_profit, stop_loss, actual_price, rsi, 0.0, 0.0, 0.0, strategy, balance,
                                                                        symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
@@ -289,24 +285,26 @@ class RoboTraderIndex():
                             msg += f'AP: ${actual_price:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} RSI: {rsi:.2f}% min_rsi: {self._min_rsi:.2f}% max_rsi: {self._max_rsi:.2f}% '
                             sm.send_status_to_telegram(msg)
                             self.log.warning(msg)
-                        # self._mutex.release()
-                        # End Lock
                 else:
                     # if self.is_long(strategy):
                     margin_operation = (actual_price - purchase_price) / purchase_price
                     profit_and_loss = actual_price - purchase_price
-            except Exception as e:
-                # if self._mutex.locked():
-                #    self._mutex.release()
-                err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'
-                self.log.exception(err_msg)
-                sm.send_status_to_telegram(err_msg)
-                error = True
-            finally:
-                time.sleep(myenv.sleep_refresh)
-                cont += 1
+
+                latest_periods = utils.has_to_update(self._all_data, self._interval)
+                if latest_periods > 2:
+                    self.log.warn(f'>> REFRESH data from web. Periods: {latest_periods}.')
+                    sm.send_status_to_telegram(f'<<{self.ix}>> REFRESH data from web. Periods: {latest_periods}.')
+                    self.update_data_from_web(latest_periods + 100)
+
                 cont_aviso += 1
-                if cont_aviso > 50 and not error:
+                if cont_aviso > 50:  # send status to telegram each x loop
                     cont_aviso = 0
                     self.log_info(purchased, open_time, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
                                   take_profit, stop_loss, target_margin, strategy, p_ema_label, p_ema_value)
+                # Sleep in each loop
+                time.sleep(myenv.sleep_refresh)
+            except Exception as e:
+                err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'
+                self.log.exception(err_msg)
+                sm.send_status_to_telegram(err_msg)
+                time.sleep(myenv.sleep_refresh)
