@@ -276,60 +276,76 @@ def is_purchased(symbol, interval):
     return res_is_purchased, purchased_price, amount_invested, take_profit, stop_loss
 
 
-def is_buying(symbol, interval):
+def status_order_buy(symbol, interval):
     id = f'{symbol}_{interval}_buy'
     orders = get_client().get_all_orders(symbol=symbol)
+    res = None
     for order in orders:
+        res = order['status']
         if order['clientOrderId'] == id:
             if (order['side'] == Client.SIDE_BUY) and \
                     (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
-                return True
-    return False
+                return order['status']
+    return res
 
 
 def register_operation(params):
-    log.warn(f'Trying to register order_limit_buy: Params> {params}')
+    status_buy, order_buy_id, order_oco_id = None, None, None
+    try:
+        log.warn(f'Trying to register order_limit_buy: Params> {params}')
 
-    symbol = params['symbol']
-    interval = params['interval']
-    new_client_order_id = f'{symbol}_{interval}_buy'
-    quantity_precision = params['quantity_precision']
-    price_precision = params['price_precision']
-    amount_invested = params['amount_invested']
+        symbol = params['symbol']
+        interval = params['interval']
+        new_client_order_id = f'{symbol}_{interval}_buy'
+        quantity_precision = params['quantity_precision']
+        price_precision = params['price_precision']
+        amount_invested = params['amount_invested']
 
-    price_order = round(params['purchase_price'], price_precision)  # get_client().get_symbol_ticker(symbol=params['symbol'])
-    params['purchase_price'] = price_order
-    quantity = round(amount_invested / price_order, quantity_precision)
-    params['quantity'] = quantity
+        price_order = round(params['purchase_price'], price_precision)  # get_client().get_symbol_ticker(symbol=params['symbol'])
+        params['purchase_price'] = price_order
+        quantity = round(amount_invested / price_order, quantity_precision)
+        params['quantity'] = quantity
 
-    order_params = {}
-    order_params['symbol'] = symbol
-    order_params['quantity'] = quantity
-    order_params['price'] = str(price_order)
-    order_params['newClientOrderId'] = new_client_order_id
+        order_params = {}
+        order_params['symbol'] = symbol
+        order_params['quantity'] = quantity
+        order_params['price'] = str(price_order)
+        order_params['newClientOrderId'] = new_client_order_id
 
-    order_buy_id = get_client().order_limit_buy(**order_params)
+        order_buy_id = get_client().order_limit_buy(**order_params)
 
-    info_msg = f'ORDER BUY: {order_params}'
-    log.warn(info_msg)
-    sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
-    log.warn(f'order_buy_id: {order_buy_id}')
+        info_msg = f'ORDER BUY: {order_params}'
+        log.warn(info_msg)
+        # sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
+        log.warn(f'order_buy_id: {order_buy_id}')
 
-    purchase_attemps = 0
-    while is_buying(params["symbol"], params["interval"]):
-        if purchase_attemps > myenv.max_purchase_attemps:
-            get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
-            # get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
-            err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
-            log.error(err_msg)
-            sm.send_status_to_telegram(err_msg)
-            return None, None
-        purchase_attemps += 1
-        time.sleep(1)
+        purchase_attemps = 0
+        status_buy = status_order_buy(params["symbol"], params["interval"])
+        while status_buy in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]:
+            if purchase_attemps > myenv.max_purchase_attemps:
+                if status_buy == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
+                    get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
+                    # get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
+                    err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
+                    log.error(err_msg)
+                    sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
+                    return order_buy_id, None
+                elif status_buy == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
+                    msg = f'BUYING OrderId: {order_buy_id["orderId"]} Partially filled, than try sell quantity partially filled'
+                    log.warn(msg)
+                    sm.send_status_to_telegram(f'[WARNING]: {symbol}_{interval}: {msg}')
+                    break
+            purchase_attemps += 1
+            time.sleep(1)
+            status_buy = status_order_buy(params["symbol"], params["interval"])
 
-    order_oco_id = register_oco_sell(params)
+        order_oco_id = register_oco_sell(params)
+    except Exception as e:
+        log.exception(e)
+        sm.send_status_to_telegram(f'[ERROR] register_operation: {symbol}_{interval}: {e}')
+        traceback.print_stack()
 
-    return order_buy_id, order_oco_id
+    return status_buy, order_buy_id, order_oco_id
 
 
 def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
@@ -355,12 +371,12 @@ def register_oco_sell(params):
     stop_loss_target = round(stop_loss_trigger * 0.95, price_precision)
 
     _quantity = get_asset_balance(symbol.split('USDT')[0], quantity_precision)
-    if _quantity > round(params['quantity'] * 1.05, quantity_precision):
+    if _quantity > round(params['quantity'] * 1.05, quantity_precision):  # Sell 5% more quantity if total quantity of asset is more than
         quantity = round(params['quantity'] * 1.05, quantity_precision)
-    elif _quantity >= round(params['quantity'], quantity_precision):
+    elif _quantity >= round(params['quantity'], quantity_precision):  # Sell exactly quantity buyed
         quantity = round(params['quantity'], quantity_precision)
     else:
-        quantity = _quantity
+        quantity = _quantity  # Sell all quantity of asset
 
     oco_params = {}
     oco_params['symbol'] = params['symbol']
@@ -377,7 +393,7 @@ def register_oco_sell(params):
     sm.send_to_telegram(info_msg)
 
     oder_oco_sell_id = get_client().order_oco_sell(**oco_params)
-    sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
+    # sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
     log.warn(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id
 

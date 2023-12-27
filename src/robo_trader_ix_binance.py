@@ -11,7 +11,7 @@ import src.calcEMA as calc_utils
 import os
 import logging
 import threading
-
+import traceback
 
 # global
 balance: float = 0.0
@@ -256,55 +256,78 @@ class RoboTraderIndex():
         global balance
         balance = utils.get_account_balance()  # ok
         target_margin = self._target_margin
+
+        no_ammount_to_invest_count = 0
         while True:
             try:
                 # Update data
-                actual_price, open_time = self.update_data()
-                rsi, p_ema_value = self.feature_engineering_on_loop()
-                purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
-                self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
-                if not purchased:
-                    strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
-                    self.log.info(f'Predicted Strategy: {strategy} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
-                    if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
-                        amount_to_invest, balance = utils.get_amount_to_invest()  # ok
-                        if amount_to_invest > myenv.min_amount_to_invest:
-                            take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
-                            ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_to_invest,
-                                                                       take_profit, stop_loss, actual_price, rsi, 0.0, 0.0, 0.0, strategy, balance,
-                                                                       symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
-                            order_buy_id, order_sell_id = utils.register_operation(ledger_params)
-                            purchase_price = actual_price
-                            msg = f'{self.ix} BUY: {strategy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchase_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
-                            msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
-                            msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f}'
-                            sm.send_to_telegram(msg)
-                            self.log.debug(msg)
-                        else:
-                            msg = f'[WARN]{self.ix}: No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
-                            msg += f'AP: ${actual_price:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} RSI: {rsi:.2f}% min_rsi: {self._min_rsi:.2f}% max_rsi: {self._max_rsi:.2f}% '
-                            sm.send_status_to_telegram(msg)
-                            self.log.warning(msg)
-                else:
-                    # if self.is_long(strategy):
-                    margin_operation = (actual_price - purchase_price) / purchase_price
-                    profit_and_loss = actual_price - purchase_price
-
                 latest_periods = utils.has_to_update(self._all_data, self._interval)
                 if latest_periods > 2:
                     self.log.warn(f'>> REFRESH data from web. Periods: {latest_periods}.')
                     sm.send_status_to_telegram(f'<<{self.ix}>> REFRESH data from web. Periods: {latest_periods}.')
                     self.update_data_from_web(latest_periods + 100)
 
+                actual_price, open_time = self.update_data()
+                rsi, p_ema_value = self.feature_engineering_on_loop()
+                strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
+                self.log.info(f'Predicted Strategy: {strategy} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
+                if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
+                    amount_to_invest, balance = utils.get_amount_to_invest()  # ok
+                    if amount_to_invest > myenv.min_amount_to_invest:
+                        purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
+                        self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
+                        if not purchased:
+                            take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
+                            ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_to_invest,
+                                                                       take_profit, stop_loss, actual_price, rsi, 0.0, 0.0, 0.0, strategy, balance,
+                                                                       symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
+                            status_buy, order_buy_id, order_sell_id = utils.register_operation(ledger_params)
+                            purchase_price = actual_price
+                            if order_buy_id is None:
+                                sm.send_to_telegram(f"{self.ix}-{strategy}: *ORDER BUY >>ERROR<<*")
+                                self.log.error(f"{self.ix}-{strategy}: *ORDER BUY*")
+                            else:
+                                msg = f'{self.ix}-{strategy}: *ORDER BUY* - Status: {status_buy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchase_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
+                                msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
+                                msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f}'
+                                sm.send_to_telegram(msg)
+                                self.log.debug(msg)
+
+                            if order_sell_id is None:
+                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL *ERROR*<<")
+                                self.log.error(f"{self.ix}-{strategy}: >>ORDER SELL ERROR<<")
+                            else:
+                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL OK<< - orderListId: {order_sell_id['orderListId']}")
+                    else:
+                        msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
+                        self.log.warn(msg)
+                        no_ammount_to_invest_count += 1
+
+# else:
+#    msg = f'[WARN]{self.ix}: No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
+#    msg += f'AP: ${actual_price:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} RSI: {rsi:.2f}% min_rsi: {self._min_rsi:.2f}% max_rsi: {self._max_rsi:.2f}% '
+#    sm.send_status_to_telegram(msg)
+#    self.log.warning(msg)
+
                 cont_aviso += 1
-                if cont_aviso > 50:  # send status to telegram each x loop
+                if cont_aviso > 100:  # send status to telegram each x loop
                     cont_aviso = 0
+                    purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
+                    if purchased:
+                        margin_operation = (actual_price - purchase_price) / purchase_price
+                        profit_and_loss = amount_invested * margin_operation
                     self.log_info(purchased, open_time, purchase_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
                                   take_profit, stop_loss, target_margin, strategy, p_ema_label, p_ema_value)
-                # Sleep in each loop
-                time.sleep(myenv.sleep_refresh)
+                    if no_ammount_to_invest_count > 0:
+                        msg = f'No Amount to invest :Tryed {no_ammount_to_invest_count} times.  ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
+                        sm.send_status_to_telegram(f'{self.ix}: {msg}')
+                        no_ammount_to_invest_count = 0
+
             except Exception as e:
+                traceback.print_stack()
                 err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'
                 self.log.exception(err_msg)
                 sm.send_status_to_telegram(err_msg)
+            finally:
+                # Sleep in each loop
                 time.sleep(myenv.sleep_refresh)
