@@ -316,7 +316,7 @@ def register_operation(params):
 
         info_msg = f'ORDER BUY: {order_params}'
         log.warn(info_msg)
-        # sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
+        sm.send_status_to_telegram(info_msg + f'order_buy_id: {order_buy_id}')
         log.warn(f'order_buy_id: {order_buy_id}')
 
         purchase_attemps = 0
@@ -390,10 +390,10 @@ def register_oco_sell(params):
 
     info_msg = f'ORDER SELL: {symbol}_{interval} - oco_params: {oco_params} - price_precision: {price_precision} - quantity_precision: {quantity_precision}'
     log.warn(info_msg)
-    sm.send_to_telegram(info_msg)
+    # sm.send_to_telegram(info_msg)
 
     oder_oco_sell_id = get_client().order_oco_sell(**oco_params)
-    # sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
+    sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
     log.warn(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id
 

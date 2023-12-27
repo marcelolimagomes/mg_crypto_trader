@@ -289,7 +289,7 @@ class RoboTraderIndex():
                             else:
                                 msg = f'{self.ix}-{strategy}: *ORDER BUY* - Status: {status_buy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchase_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
                                 msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
-                                msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f}'
+                                msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} orderId: {order_buy_id["orderId"]} transactTime: {order_buy_id["transactTime"]} '
                                 sm.send_to_telegram(msg)
                                 self.log.debug(msg)
 
@@ -297,7 +297,7 @@ class RoboTraderIndex():
                                 sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL *ERROR*<<")
                                 self.log.error(f"{self.ix}-{strategy}: >>ORDER SELL ERROR<<")
                             else:
-                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL OK<< - orderListId: {order_sell_id['orderListId']}")
+                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL OK<< - orderListId: {order_sell_id['orderListId']} transactionTime: {order_sell_id['transactionTime']}")
                     else:
                         msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
                         self.log.warn(msg)
