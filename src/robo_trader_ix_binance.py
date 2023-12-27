@@ -303,12 +303,6 @@ class RoboTraderIndex():
                         self.log.warn(msg)
                         no_ammount_to_invest_count += 1
 
-# else:
-#    msg = f'[WARN]{self.ix}: No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
-#    msg += f'AP: ${actual_price:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} RSI: {rsi:.2f}% min_rsi: {self._min_rsi:.2f}% max_rsi: {self._max_rsi:.2f}% '
-#    sm.send_status_to_telegram(msg)
-#    self.log.warning(msg)
-
                 cont_aviso += 1
                 if cont_aviso > 100:  # send status to telegram each x loop
                     cont_aviso = 0
