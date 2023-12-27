@@ -1,6 +1,6 @@
 #!/bin/bash
 
-conda activate rapids-23.10
+conda activate mg
 
 # python . -batch-training -calc-rsi -verbose -prediction-mode=index -symbol-list=BTCUSDT -interval-list=1m -range-min-rsi=28 -range-max-rsi=68 -range-p-ema=150,150 -target-margin-list=1.0
 # python . -batch-training -calc-rsi -verbose -prediction-mode=index -interval-list=1m -range-min-rsi=28 -range-max-rsi=68 -range-p-ema=150,150 -target-margin-list=1.0
