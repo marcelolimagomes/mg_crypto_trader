@@ -239,7 +239,7 @@ class RoboTraderIndex():
         cont_aviso = 101
 
         purchased = False
-        purchase_price = 0.0
+        purchase_price = 1.0
         actual_price = 0.0
         amount_invested = 0.0
         amount_to_invest = 0.0
@@ -274,7 +274,8 @@ class RoboTraderIndex():
                 if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
                     amount_to_invest, balance = utils.get_amount_to_invest()  # ok
                     if amount_to_invest > myenv.min_amount_to_invest:
-                        purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
+                        # purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
+                        purchased, order_sell_limit = utils.is_purchased(self._symbol, self._interval)
                         self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
                         if not purchased:
                             take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
@@ -283,21 +284,18 @@ class RoboTraderIndex():
                                                                        symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
                             status_buy, order_buy_id, order_sell_id = utils.register_operation(ledger_params)
                             purchase_price = actual_price
+                            amount_invested = amount_to_invest
                             if order_buy_id is None:
                                 sm.send_to_telegram(f"{self.ix}-{strategy}: *ORDER BUY >>ERROR<<*")
                                 self.log.error(f"{self.ix}-{strategy}: *ORDER BUY*")
                             else:
                                 msg = f'{self.ix}-{strategy}: *ORDER BUY* - Status: {status_buy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchase_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
                                 msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
-                                msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} orderId: {order_buy_id["orderId"]} transactTime: {order_buy_id["transactTime"]} '
+                                msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} SELL: {"OK" if order_sell_id is not None else "ERROR"} '
                                 sm.send_to_telegram(msg)
                                 self.log.debug(msg)
-
-                            if order_sell_id is None:
-                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL *ERROR*<<")
-                                self.log.error(f"{self.ix}-{strategy}: >>ORDER SELL ERROR<<")
-                            else:
-                                sm.send_to_telegram(f"{self.ix}-{strategy}: >>ORDER SELL OK<< - orderListId: {order_sell_id['orderListId']} transactionTime: {order_sell_id['transactionTime']}")
+                                if order_sell_id is None:
+                                    self.log.error(f"{self.ix}-{strategy}: >>ORDER SELL ERROR<<")
                     else:
                         msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
                         self.log.warn(msg)
@@ -306,7 +304,7 @@ class RoboTraderIndex():
                 cont_aviso += 1
                 if cont_aviso > 100:  # send status to telegram each x loop
                     cont_aviso = 0
-                    purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
+                    # purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
                     if purchased:
                         margin_operation = (actual_price - purchase_price) / purchase_price
                         profit_and_loss = amount_invested * margin_operation

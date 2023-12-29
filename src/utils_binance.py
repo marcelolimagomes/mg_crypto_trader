@@ -47,11 +47,6 @@ def parse_type_fields(df, parse_dates=False):
                 if df[col].isna().sum() == 0:
                     df[col] = df[col].astype('float32')
 
-
-
-
-
-
         for col in myenv.integer_kline_cols:
             if col in df.columns:
                 if df[col].isna().sum() == 0:
@@ -240,52 +235,38 @@ def get_amount_to_invest():
 
 
 def is_purchased(symbol, interval):
-    id_buy = f'{symbol}_{interval}_buy'
+    # id_buy = f'{symbol}_{interval}_buy'
     id_limit = f'{symbol}_{interval}_limit'
-    id_stop = f'{symbol}_{interval}_stop'
-    orders = get_client().get_all_orders(symbol=symbol, limit=20)
+    # id_stop = f'{symbol}_{interval}_stop'
 
+    order = None
     res_is_purchased = False
-    purchased_price = 0.0
-    stop_loss = 0.0
-    take_profit = 0.0
-    executed_qty = 0.0
-    amount_invested = 0.0
+    # purchased_price = 0.0
+    # stop_loss = 0.0
+    # take_profit = 0.0
+    # executed_qty = 0.0
+    # amount_invested = 0.0
     try:
-        df_order = pd.DataFrame(orders)
-        if df_order.shape[0] > 0:
-            key = (df_order['clientOrderId'] == id_buy) | (df_order['clientOrderId'] == id_limit) | (df_order['clientOrderId'] == id_stop)
-            if key.sum() > 0:
-                df_order = df_order[key]
-                res_is_purchased = df_order['status'].isin([Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]).sum() > 0
-                if res_is_purchased:
-                    has_buy = df_order['clientOrderId'] == id_buy
-                    if has_buy.sum() > 0:
-                        purchased_price = float(df_order[has_buy].tail(1)['price'].values[0])
-                        executed_qty = float(df_order[has_buy].tail(1)['executedQty'].values[0])
-                        amount_invested = executed_qty * purchased_price
-                    has_limit = df_order['clientOrderId'] == id_limit
-                    if has_limit.sum() > 0:
-                        take_profit = float(df_order[has_limit].tail(1)['price'].values[0])
-                    has_stop = df_order['clientOrderId'] == id_stop
-                    if has_stop.sum() > 0:
-                        stop_loss = float(df_order[has_stop].tail(1)['stopPrice'].values[0])
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id_limit)
+        res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
     except Exception as e:
-        log.exception(e)
-        sm.send_status_to_telegram(f'ERROR on call is_purchased({symbol}, {interval}): {e}')
-    return res_is_purchased, purchased_price, amount_invested, take_profit, stop_loss
+        log.exception(f'is_purchased - ERROR: {e}')
+        traceback.print_stack()
+        sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
+
+    return res_is_purchased, order
 
 
 def status_order_buy(symbol, interval):
-    id = f'{symbol}_{interval}_buy'
-    orders = get_client().get_all_orders(symbol=symbol, limit=20)
     res = None
-    for order in orders:
+    id = f'{symbol}_{interval}_buy'
+    try:
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id)
         res = order['status']
-        if order['clientOrderId'] == id:
-            if (order['side'] == Client.SIDE_BUY) and \
-                    (order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]):
-                return order['status']
+    except Exception as e:
+        log.exception(f'status_order_buy - ERROR: {e}')
+        traceback.print_stack()
+        sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_buy - ERROR: {e}')
     return res
 
 
@@ -321,11 +302,10 @@ def register_operation(params):
 
         purchase_attemps = 0
         status_buy = status_order_buy(params["symbol"], params["interval"])
-        while status_buy in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED, Client.ORDER_STATUS_PENDING_CANCEL]:
+        while status_buy in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]:
             if purchase_attemps > myenv.max_purchase_attemps:
                 if status_buy == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
                     get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
-                    # get_client()._delete('openOrders', True, data={'symbol': params['symbol']})
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')

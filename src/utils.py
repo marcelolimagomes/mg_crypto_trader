@@ -256,7 +256,7 @@ def prepare_best_params_index(pnl_label='pnl'):
         if df_aux['pnl'].values[0] > myenv.min_pnl_to_include_on_best_params:
             df_top_params = pd.concat([df_top_params, df_aux], ignore_index=True)
 
-    df_top_params.sort_values(by=['symbol', pnl_label, 'min_rsi', 'max_rsi', 'stop_loss_multiplier'], ascending=[True, True, False, True, False], inplace=True)
+    df_top_params.sort_values(by=[pnl_label, 'min_rsi', 'max_rsi', 'stop_loss_multiplier'], ascending=[True, False, True, False], inplace=True)
     top_paramers_filename = f'{myenv.datadir}/top_params_index.csv'
     log.info(f'Top Parameters Index save to: {top_paramers_filename}')
     df_top_params.to_csv(top_paramers_filename, sep=';', index=False)
@@ -1338,7 +1338,7 @@ def simule_index_trading2(_data: pd.DataFrame, symbol: str, interval: str, range
                 ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
                 _data[ix_predict] = np.where((_data['close'] > _data[f'ema_{p_ema}p']) & (_data['rsi'] >= max_rsi), 'SHORT', np.where((_data['close'] < _data[f'ema_{p_ema}p']) & (_data['rsi'] <= min_rsi), 'LONG', 'ESTAVEL'))
                 for target_margin in target_margin_list:
-                    for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                    for stop_loss_multiplier in range(1, myenv.stop_loss_range_multiplier + 1):
                         ix = f'{target_margin}|{p_ema}|{min_rsi}|{max_rsi}|{stop_loss_multiplier}|'
                         r[f'{ix}purchased'] = False
                         r[f'{ix}perform_sell'] = False
@@ -1366,7 +1366,7 @@ def simule_index_trading2(_data: pd.DataFrame, symbol: str, interval: str, range
                     ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
                     strategy = row[ix_predict]
                     for target_margin in target_margin_list:
-                        for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                        for stop_loss_multiplier in range(1, myenv.stop_loss_range_multiplier + 1):
                             ix = f'{target_margin}|{p_ema}|{min_rsi}|{max_rsi}|{stop_loss_multiplier}|'
                             if not r[f'{ix}purchased']:
                                 if strategy.startswith('LONG'):  # <SIMULE ONLY LONG STRATEGY> or strategy.startswith('SHORT'):  # If true, BUY
@@ -1406,7 +1406,7 @@ def simule_index_trading2(_data: pd.DataFrame, symbol: str, interval: str, range
             for max_rsi in range(myenv.range_max_rsi_start, range_max_rsi + 1, 2):
                 ix_predict = f'{p_ema}_{min_rsi}_{max_rsi}'
                 for target_margin in target_margin_list:
-                    for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                    for stop_loss_multiplier in range(1, myenv.stop_loss_range_multiplier + 1):
                         ix = f'{target_margin}|{p_ema}|{min_rsi}|{max_rsi}|{stop_loss_multiplier}|'
                         symbol_result.append({'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                               'symbol': symbol,

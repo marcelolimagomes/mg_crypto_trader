@@ -162,7 +162,7 @@ class BatchTrainIndex:
                     for p_ema in range(self._range_p_ema_ini, self._range_p_ema_end + 1, 25):
                         for min_rsi in range(self._min_rsi, 36 + 1, 2):
                             for max_rsi in range(72, self._max_rsi + 1, 2):
-                                for stop_loss_multiplier in range(2, myenv.stop_loss_range_multiplier + 1):
+                                for stop_loss_multiplier in range(1, myenv.stop_loss_range_multiplier + 1):
                                     train_param = {
                                         'all_data': self._all_data_list[ix_symbol],
                                         'symbol': symbol,
