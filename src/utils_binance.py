@@ -47,10 +47,10 @@ def parse_type_fields(df, parse_dates=False):
                 if df[col].isna().sum() == 0:
                     df[col] = df[col].astype('float32')
 
-        for col in myenv.float_kline_cols:
-            if col in df.columns:
-                if df[col].isna().sum() == 0:
-                    df[col] = df[col].astype('float32')
+
+
+
+
 
         for col in myenv.integer_kline_cols:
             if col in df.columns:
@@ -243,7 +243,7 @@ def is_purchased(symbol, interval):
     id_buy = f'{symbol}_{interval}_buy'
     id_limit = f'{symbol}_{interval}_limit'
     id_stop = f'{symbol}_{interval}_stop'
-    orders = get_client().get_all_orders(symbol=symbol)
+    orders = get_client().get_all_orders(symbol=symbol, limit=20)
 
     res_is_purchased = False
     purchased_price = 0.0
@@ -278,7 +278,7 @@ def is_purchased(symbol, interval):
 
 def status_order_buy(symbol, interval):
     id = f'{symbol}_{interval}_buy'
-    orders = get_client().get_all_orders(symbol=symbol)
+    orders = get_client().get_all_orders(symbol=symbol, limit=20)
     res = None
     for order in orders:
         res = order['status']

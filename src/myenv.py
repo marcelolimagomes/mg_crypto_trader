@@ -46,7 +46,8 @@ range_max_rsi_start = 68
 
 
 # :::>>>
-default_amount_to_invest = 18.00
+default_amount_to_invest = 31.50
+
 min_amount_to_invest = 5.00
 
 min_pnl_to_include_on_best_params = 250.0

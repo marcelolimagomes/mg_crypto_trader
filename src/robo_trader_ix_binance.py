@@ -265,7 +265,7 @@ class RoboTraderIndex():
                 if latest_periods > 2:
                     self.log.warn(f'>> REFRESH data from web. Periods: {latest_periods}.')
                     sm.send_status_to_telegram(f'<<{self.ix}>> REFRESH data from web. Periods: {latest_periods}.')
-                    self.update_data_from_web(latest_periods + 100)
+                    self.update_data_from_web(latest_periods + 5)
 
                 actual_price, open_time = self.update_data()
                 rsi, p_ema_value = self.feature_engineering_on_loop()
