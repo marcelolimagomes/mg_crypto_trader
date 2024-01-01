@@ -251,7 +251,7 @@ def is_purchased(symbol, interval):
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
     except Exception as e:
         log.exception(f'is_purchased - ERROR: {e}')
-        traceback.print_stack()
+        # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
 
     return res_is_purchased, order
@@ -265,7 +265,7 @@ def status_order_buy(symbol, interval):
         res = order['status']
     except Exception as e:
         log.exception(f'status_order_buy - ERROR: {e}')
-        traceback.print_stack()
+        # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_buy - ERROR: {e}')
     return res
 

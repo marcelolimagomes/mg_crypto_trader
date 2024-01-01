@@ -272,12 +272,11 @@ class RoboTraderIndex():
                 strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
                 self.log.info(f'Predicted Strategy: {strategy} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
                 if self.is_long(strategy):  # Olny BUY with LONG strategy. If true, BUY
-                    amount_to_invest, balance = utils.get_amount_to_invest()  # ok
-                    if amount_to_invest > myenv.min_amount_to_invest:
-                        # purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
-                        purchased, order_sell_limit = utils.is_purchased(self._symbol, self._interval)
-                        self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
-                        if not purchased:
+                    purchased, order_sell_limit = utils.is_purchased(self._symbol, self._interval)
+                    self.log.info(f'Purchased: {purchased} - Price: {actual_price:.{symbol_precision}f} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
+                    if not purchased:
+                        amount_to_invest, balance = utils.get_amount_to_invest()  # ok
+                        if amount_to_invest > myenv.min_amount_to_invest:
                             take_profit, stop_loss = utils.calc_take_profit_stop_loss(strategy, actual_price, target_margin, self._stop_loss_multiplier)  # ok
                             ledger_params = utils.get_params_operation(open_time, self._symbol, self._interval, 'BUY', target_margin, amount_to_invest,
                                                                        take_profit, stop_loss, actual_price, rsi, 0.0, 0.0, 0.0, strategy, balance,
@@ -285,24 +284,19 @@ class RoboTraderIndex():
                             status_buy, order_buy_id, order_sell_id = utils.register_operation(ledger_params)
                             purchase_price = actual_price
                             amount_invested = amount_to_invest
-                            if order_buy_id is None:
-                                sm.send_to_telegram(f"{self.ix}-{strategy}: *ORDER BUY >>ERROR<<*")
-                                self.log.error(f"{self.ix}-{strategy}: *ORDER BUY*")
-                            else:
+                            if order_buy_id is not None:
                                 msg = f'{self.ix}-{strategy}: *ORDER BUY* - Status: {status_buy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchase_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
                                 msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
                                 msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} SELL: {"OK" if order_sell_id is not None else "ERROR"} '
                                 sm.send_to_telegram(msg)
                                 self.log.debug(msg)
-                                if order_sell_id is None:
-                                    self.log.error(f"{self.ix}-{strategy}: >>ORDER SELL ERROR<<")
-                    else:
-                        msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
-                        self.log.warn(msg)
-                        no_ammount_to_invest_count += 1
+                        else:
+                            msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
+                            self.log.warn(msg)
+                            no_ammount_to_invest_count += 1
 
                 cont_aviso += 1
-                if cont_aviso > 100:  # send status to telegram each x loop
+                if cont_aviso > 50:  # send status to telegram each x loop
                     cont_aviso = 0
                     # purchased, purchase_price, amount_invested, take_profit, stop_loss = utils.is_purchased(self._symbol, self._interval)
                     if purchased:
