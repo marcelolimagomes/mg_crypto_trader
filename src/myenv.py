@@ -50,7 +50,7 @@ default_amount_to_invest = 31.50
 
 min_amount_to_invest = 5.00
 
-min_pnl_to_include_on_best_params = 130.0
+min_pnl_to_include_on_best_params = 135.0
 
 initial_amount_balance = 10000
 rows_to_train = 50000
