@@ -265,10 +265,10 @@ class RoboTraderIndex():
             try:
                 actual_price, open_time, rsi, p_ema_value = self.update_data()
                 strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
-                self.log.info(f'PS: {strategy} OT: {open_time} AP: {actual_price:.{symbol_precision}f} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
+                self.log.info(f'{strategy} OT: {open_time} AP: {actual_price:.{symbol_precision}f} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
                 if self.is_long(strategy):  # Only BUY with LONG strategy. If true, BUY
                     purchased, order_sell_limit, take_profit = utils.status_order_limit(self._symbol, self._interval)
-                    self.log.info(f'Purchased: {purchased} - Target Margin: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - Balance: ${balance:.{quote_precision}f}')
+                    self.log.info(f'Purchased: {purchased} - TM: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - B: ${balance:.{quote_precision}f}')
                     if not purchased:
                         amount_to_invest, balance = utils.get_amount_to_invest()  # ok
                         if amount_to_invest > myenv.min_amount_to_invest:

@@ -1,4 +1,5 @@
 from binance import Client, helpers
+from binance.exceptions import BinanceAPIException
 from datetime import datetime, timedelta
 
 import sys
@@ -244,9 +245,12 @@ def status_order_limit(symbol, interval):
         order = get_client().get_order(symbol=symbol, origClientOrderId=id_limit)
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         take_profit = float(order['price'])
+    except BinanceAPIException as e:
+        if e.code != -2013:
+            log.exception(f'is_purchased - ERROR: {e}')
+            sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
     except Exception as e:
         log.exception(f'is_purchased - ERROR: {e}')
-        # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
 
     return res_is_purchased, order, take_profit
@@ -264,14 +268,13 @@ def status_order_stop(symbol, interval):
         stop_loss = float(order['stopPrice'])
     except Exception as e:
         log.exception(f'status_order_stop - ERROR: {e}')
-        # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_stop - ERROR: {e}')
 
     return res_is_purchased, order, stop_loss
 
 
 def status_order_buy(symbol, interval):
-    res_is_buying = None
+    res_is_buying = False
     id = f'{symbol}_{interval}_buy'
     purchased_price = 0.0
     executed_qty = 0.0
@@ -284,13 +287,12 @@ def status_order_buy(symbol, interval):
         amount_invested = purchased_price * executed_qty
     except Exception as e:
         log.exception(f'status_order_buy - ERROR: {e}')
-        # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_buy - ERROR: {e}')
     return res_is_buying, order, purchased_price, executed_qty, amount_invested
 
 
 def register_operation(params):
-    is_buying, order_buy_id, order_oco_id = None, None, None
+    status, order_buy_id, order_oco_id = None, None, None
     try:
         log.warn(f'Trying to register order_limit_buy: Params> {params}')
 
@@ -321,6 +323,7 @@ def register_operation(params):
 
         purchase_attemps = 0
         is_buying, order_buy_id, _, _, _ = status_order_buy(params["symbol"], params["interval"])
+        status = order_buy_id['status']
         while is_buying:
             if purchase_attemps > myenv.max_purchase_attemps:
                 if is_buying == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
@@ -337,6 +340,7 @@ def register_operation(params):
             purchase_attemps += 1
             time.sleep(1)
             is_buying, order_buy_id, _, _, _ = status_order_buy(params["symbol"], params["interval"])
+            status = order_buy_id['status']
 
         order_oco_id = register_oco_sell(params)
     except Exception as e:
@@ -344,7 +348,7 @@ def register_operation(params):
         sm.send_status_to_telegram(f'[ERROR] register_operation: {symbol}_{interval}: {e}')
         traceback.print_stack()
 
-    return is_buying, order_buy_id, order_oco_id
+    return status, order_buy_id, order_oco_id
 
 
 def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
