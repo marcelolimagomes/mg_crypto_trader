@@ -234,44 +234,63 @@ def get_amount_to_invest():
     return amount_invested, balance
 
 
-def is_purchased(symbol, interval):
-    # id_buy = f'{symbol}_{interval}_buy'
+def status_order_limit(symbol, interval):
     id_limit = f'{symbol}_{interval}_limit'
-    # id_stop = f'{symbol}_{interval}_stop'
 
     order = None
     res_is_purchased = False
-    # purchased_price = 0.0
-    # stop_loss = 0.0
-    # take_profit = 0.0
-    # executed_qty = 0.0
-    # amount_invested = 0.0
+    take_profit = 0.0
     try:
         order = get_client().get_order(symbol=symbol, origClientOrderId=id_limit)
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
+        take_profit = float(order['price'])
     except Exception as e:
         log.exception(f'is_purchased - ERROR: {e}')
         # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
 
-    return res_is_purchased, order
+    return res_is_purchased, order, take_profit
+
+
+def status_order_stop(symbol, interval):
+    id_stop = f'{symbol}_{interval}_stop'
+
+    order = None
+    res_is_purchased = False
+    stop_loss = 0.0
+    try:
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id_stop)
+        res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
+        stop_loss = float(order['stopPrice'])
+    except Exception as e:
+        log.exception(f'status_order_stop - ERROR: {e}')
+        # traceback.print_stack()
+        sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_stop - ERROR: {e}')
+
+    return res_is_purchased, order, stop_loss
 
 
 def status_order_buy(symbol, interval):
-    res = None
+    res_is_buying = None
     id = f'{symbol}_{interval}_buy'
+    purchased_price = 0.0
+    executed_qty = 0.0
+    amount_invested = 0.0
     try:
         order = get_client().get_order(symbol=symbol, origClientOrderId=id)
-        res = order['status']
+        res_is_buying = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
+        purchased_price = float(order['price'])
+        executed_qty = float(order['executedQty'])
+        amount_invested = purchased_price * executed_qty
     except Exception as e:
         log.exception(f'status_order_buy - ERROR: {e}')
         # traceback.print_stack()
         sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_buy - ERROR: {e}')
-    return res
+    return res_is_buying, order, purchased_price, executed_qty, amount_invested
 
 
 def register_operation(params):
-    status_buy, order_buy_id, order_oco_id = None, None, None
+    is_buying, order_buy_id, order_oco_id = None, None, None
     try:
         log.warn(f'Trying to register order_limit_buy: Params> {params}')
 
@@ -301,23 +320,23 @@ def register_operation(params):
         log.warn(f'order_buy_id: {order_buy_id}')
 
         purchase_attemps = 0
-        status_buy = status_order_buy(params["symbol"], params["interval"])
-        while status_buy in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]:
+        is_buying, order_buy_id, _, _, _ = status_order_buy(params["symbol"], params["interval"])
+        while is_buying:
             if purchase_attemps > myenv.max_purchase_attemps:
-                if status_buy == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
+                if is_buying == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
                     get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
                     return order_buy_id, None
-                elif status_buy == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
+                elif is_buying == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
                     msg = f'BUYING OrderId: {order_buy_id["orderId"]} Partially filled, than try sell quantity partially filled'
                     log.warn(msg)
                     sm.send_status_to_telegram(f'[WARNING]: {symbol}_{interval}: {msg}')
                     break
             purchase_attemps += 1
             time.sleep(1)
-            status_buy = status_order_buy(params["symbol"], params["interval"])
+            is_buying, order_buy_id, _, _, _ = status_order_buy(params["symbol"], params["interval"])
 
         order_oco_id = register_oco_sell(params)
     except Exception as e:
@@ -325,7 +344,7 @@ def register_operation(params):
         sm.send_status_to_telegram(f'[ERROR] register_operation: {symbol}_{interval}: {e}')
         traceback.print_stack()
 
-    return status_buy, order_buy_id, order_oco_id
+    return is_buying, order_buy_id, order_oco_id
 
 
 def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
@@ -442,5 +461,5 @@ def has_to_update(data: pd.DataFrame, interval: str):
         latest_update = get_latest_update(data)
         delta_update = utcnow - latest_update
         latest_periods = to_periods(delta_update, interval)
-    log.debug(f'has_to_update>>>>> LOOP({interval}) - utcnow: {utcnow} - latest_update: {latest_update} - delta_update: {delta_update} - latest_periods: {latest_periods}')
+        log.debug(f'has_to_update: interval: {interval} - utcnow: {utcnow} - latest_update: {latest_update} - delta_update: {delta_update} - latest_periods: {latest_periods}')
     return latest_periods

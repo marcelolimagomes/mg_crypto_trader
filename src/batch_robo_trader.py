@@ -86,16 +86,15 @@ class BatchRoboTrader:
                 try:
                     ix_symbol = f"{params['symbol']}_{params['interval']}"
                     if ix_symbol not in self._all_data_list:
-                        self.log.info(f'PredictionMode: {self._prediction_mode} - Loading data to memory for symbol: {ix_symbol}...')
-                        self._all_data_list[ix_symbol] = utils.get_data(
+                        limit = int(params["p_ema"]) * 2
+                        self.log.info(f'PredictionMode: {self._prediction_mode} - Loading data to memory for symbol: {ix_symbol} - Limit: {limit}...')
+                        self._all_data_list[ix_symbol] = utils.get_klines(
                             symbol=params['symbol'],
-                            save_database=False,
                             interval=params['interval'],
-                            tail=1000,
+                            max_date=None,
+                            limit=limit,
                             columns=myenv.all_index_cols,
-                            parse_dates=True,
-                            updata_data_from_web=self._update_data_from_web,
-                            start_date=self._start_date)
+                            parse_dates=True)
                     self._all_data_list[ix_symbol].info() if self._verbose else None
                     self.log.info(f'Loaded data to memory for symbol: {ix_symbol} - Shape: {self._all_data_list[ix_symbol].shape}')
                 except Exception as e:
@@ -131,7 +130,7 @@ class BatchRoboTrader:
 
                     self.log.info(f'PredictionMode: {self._prediction_mode} - Calc RSI for symbol: {ix_symbol}')
                     self._all_data_list[ix_symbol] = calc_utils.calc_RSI(self._all_data_list[ix_symbol])
-                    self._all_data_list[ix_symbol].dropna(inplace=True)
+                    # self._all_data_list[ix_symbol].dropna(inplace=True)
                     self._all_data_list[ix_symbol].info() if self._verbose else None
 
                 except Exception as e:

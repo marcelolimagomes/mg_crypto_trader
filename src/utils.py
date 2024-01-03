@@ -968,7 +968,6 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
         df_database = df_database.tail(tail)
     return df_database
 
-
 def send_message(df_predict):
     message = f'Ticker: {df_predict["symbol"].values[0]} - Operação: {df_predict["prediction_label"].values[0]} - Valor Atual: {df_predict["close"].values[0]}'
     sm.send_to_telegram(message)
