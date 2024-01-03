@@ -331,13 +331,14 @@ def register_operation(params):
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
-                    return status, order_buy_id, None
+                    return status, None, None
                 elif status == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
                     msg = f'BUYING OrderId: {order_buy_id["orderId"]} Partially filled, than try sell quantity partially filled'
                     log.warn(msg)
                     sm.send_status_to_telegram(f'[WARNING]: {symbol}_{interval}: {msg}')
                     break
             purchase_attemps += 1
+            time.sleep(1)
             is_buying, order_buy_id, _, _, _ = status_order_buy(params["symbol"], params["interval"])
             status = order_buy_id['status']
 
@@ -346,8 +347,6 @@ def register_operation(params):
         log.exception(e)
         sm.send_status_to_telegram(f'[ERROR] register_operation: {symbol}_{interval}: {e}')
         traceback.print_stack()
-    finally:
-        time.sleep(1)
 
     return status, order_buy_id, order_oco_id
 
