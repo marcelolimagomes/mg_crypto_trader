@@ -326,13 +326,13 @@ def register_operation(params):
         status = order_buy_id['status']
         while is_buying:
             if purchase_attemps > myenv.max_purchase_attemps:
-                if is_buying == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
+                if status == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
                     get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
                     return order_buy_id, None
-                elif is_buying == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
+                elif status == Client.ORDER_STATUS_PARTIALLY_FILLED:  # Partially filled, than try sell quantity partially filled
                     msg = f'BUYING OrderId: {order_buy_id["orderId"]} Partially filled, than try sell quantity partially filled'
                     log.warn(msg)
                     sm.send_status_to_telegram(f'[WARNING]: {symbol}_{interval}: {msg}')
