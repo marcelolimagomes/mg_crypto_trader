@@ -188,9 +188,9 @@ class BatchRoboTrader:
             for param in self._top_params_index:
                 # print('twm>>>>> ', twm.start_kline_socket(callback=self.handle_socket_kline, args=param, symbol=param["symbol"], interval=param["interval"]))
                 ix_symbol = f'{param["symbol"]}_{param["interval"]}'
-                param['all_data'] = self._all_data_list[ix_symbol]
+                # param['all_data'] = self._all_data_list[ix_symbol]
                 param['start_date'] = self._start_date
-                param['latest_update'] = utils.get_latest_update(self._all_data_list[ix_symbol])
+                # param['latest_update'] = utils.get_latest_update(self._all_data_list[ix_symbol])
                 param['calc_rsi'] = True
                 param['verbose'] = self._verbose
                 # params['arguments'] = params['arguments']
@@ -209,11 +209,12 @@ class BatchRoboTrader:
         # twm.join()
 
     def run(self):
-        self.log.info(f'Start _data_collection...')
-        self._data_collection()
-        self.log.info(f'Start _data_preprocessing...')
-        self._data_preprocessing()
+
         if self._prediction_mode == "ml":
+            self.log.info(f'Start _data_collection...')
+            self._data_collection()
+            self.log.info(f'Start _data_preprocessing...')
+            self._data_preprocessing()
             self.run_robo_trader_ml()
         elif self._prediction_mode == "index":
             self.run_robo_trader_index()

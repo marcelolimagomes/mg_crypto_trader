@@ -48,6 +48,7 @@ def login_binance() -> Client:
         sec = first_line.split('##$$')[1]
 
     _client = Client(key, sec)
+    _client.REQUEST_TIMEOUT = 20
     return _client
 
 
