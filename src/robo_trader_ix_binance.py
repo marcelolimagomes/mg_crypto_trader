@@ -75,17 +75,10 @@ class RoboTraderIndex():
 
     def log_info(self, purchased: bool, open_time, purchased_price: float, actual_price: float, margin_operation: float, amount_invested: float, profit_and_loss: float, balance: float, take_profit: float,
                  stop_loss: float, target_margin: float, strategy: str, p_ema_label: str, p_ema_value: float):
-        '''
-        _open_time = open_time
-        if open_time is not None:
-            if isinstance(open_time, np.datetime64):
-                _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
-        '''
+        # _open_time = utils.format_date(open_time)
 
         if purchased:
-            msg = f'*PURCHASED*: {self._symbol}_{self._interval} {strategy} TM: {target_margin:.2f}% '
+            msg = f'{self._symbol}_{self._interval}: *PURCHASED*: {strategy} TM: {target_margin:.2f}% '
             msg += f'PP: ${purchased_price:.6f} AP: ${actual_price:.6f} MO: {100*margin_operation:.2f}% AI: ${amount_invested:.2f} '
             msg += f'PnL: ${profit_and_loss:.2f} TP: ${take_profit:.6f} SL: ${stop_loss:.6f} B: ${balance:.2f} {p_ema_label}: ${p_ema_value:.6f}'
         # else:
@@ -94,19 +87,12 @@ class RoboTraderIndex():
         sm.send_status_to_telegram(msg)
 
     def log_buy(self, open_time, strategy, purchased_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi, restored=False):
-        '''
-        _open_time = open_time
-        if open_time is not None:
-            if isinstance(open_time, np.datetime64):
-                _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
-        '''
+        _open_time = utils.format_date(open_time)
         status = ''
         if restored:
             status = '-RESTORED'
 
-        msg = f'{self._symbol}_{self._interval}: *BUYING{status}*:  OT: {open_time} St: {strategy} TM: {target_margin:.2f}% '
+        msg = f'{self._symbol}_{self._interval}: *BUYING{status}*:  OT: {_open_time} St: {strategy} TM: {target_margin:.2f}% '
         msg += f'PP: $ {purchased_price:.6f} AI: $ {amount_invested:.2f} TP: $ {take_profit:.6f} '
         msg += f'SL: $ {stop_loss:.6f} RSI: {rsi:.2f} B: $ {balance:.2f}'
         self.log.info(f'{msg}')
@@ -114,16 +100,9 @@ class RoboTraderIndex():
 
     def log_selling(self, open_time, strategy, purchased_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance, take_profit,
                     stop_loss, target_margin, rsi):
-        '''
-        _open_time = open_time
-        if open_time is not None:
-            if isinstance(open_time, np.datetime64):
-                _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
-        '''
+        _open_time = utils.format_date(open_time)
 
-        msg = f'{self._symbol}_{self._interval}: *SELLING* OT: {open_time} St: {strategy} TM: {target_margin:.2f}% '
+        msg = f'{self._symbol}_{self._interval}: *SELLING* OT: {_open_time} St: {strategy} TM: {target_margin:.2f}% '
         msg += f'PP: $ {purchased_price:.6f} AP: $ {actual_price:.6f} MO: {100*margin_operation:.2f}% AI: $ {amount_invested:.2f} '
         msg += f'TP: $ {take_profit:.6f} SL: $ {stop_loss:.6f} RSI: {rsi:.2f} B: $ {balance:.2f} PnL O: $ {profit_and_loss:.2f} '
         self.log.info(f'{msg}')
@@ -275,11 +254,12 @@ class RoboTraderIndex():
         while True:
             try:
                 actual_price, open_time, rsi, p_ema_value = self.update_data()
+                _open_time = utils.format_date(open_time)
                 strategy = utils.predict_strategy_index(self._all_data, self._p_ema, self._max_rsi, self._min_rsi)  # ok
-                self.log.info(f'{strategy} OT: {open_time} AP: {actual_price:.{symbol_precision}f} - min_rsi: {self._min_rsi:.2f}% - max_rsi: {self._max_rsi:.2f}%')
+                self.log.info(f'{strategy} OT: {_open_time} AP: {actual_price:.{symbol_precision}f} RSI: {rsi:.2f}%  {p_ema_label}: ${p_ema_value:.{symbol_precision}f} min_rsi: {self._min_rsi:.2f}% max_rsi: {self._max_rsi:.2f}%')
                 if self.is_long(strategy):  # Only BUY with LONG strategy. If true, BUY
                     purchased, order_sell_limit, take_profit = utils.status_order_limit(self._symbol, self._interval)
-                    self.log.info(f'Purchased: {purchased} - TM: {target_margin:.2f}% - RSI: {rsi:.2f}% - {p_ema_label}: ${p_ema_value:.{symbol_precision}f} - B: ${balance:.{quote_precision}f}')
+                    self.log.info(f'Purchased: {purchased} - TM: {target_margin:.2f}% - B: ${balance:.{quote_precision}f}')
                     if not purchased:
                         amount_to_invest, balance = utils.get_amount_to_invest()  # ok
                         if amount_to_invest > myenv.min_amount_to_invest:
@@ -294,7 +274,7 @@ class RoboTraderIndex():
                                 executed_qty = float(order_buy_id['executedQty'])
                                 amount_invested = purchased_price * executed_qty
 
-                                msg = f'{self.ix}-{strategy}: *ORDER BUY* - Status: {status_buy} AP: ${actual_price:.{symbol_precision}f} PP: ${purchased_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
+                                msg = f'{self.ix}-{strategy}: *ORDER BUY* - {status_buy} OT: {_open_time} AP: ${actual_price:.{symbol_precision}f} PP: ${purchased_price:.{symbol_precision}f} AI: ${amount_to_invest:.2f} '
                                 msg += f'TP: ${take_profit:.{symbol_precision}f} SL: ${stop_loss:.{symbol_precision}f} {p_ema_label}: ${p_ema_value:.{symbol_precision}f} '
                                 msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} SELL: {"OK" if order_sell_id is not None else "ERROR"} '
                                 sm.send_to_telegram(msg)

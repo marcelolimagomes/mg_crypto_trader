@@ -16,6 +16,19 @@ log = logging.getLogger()
 client: Client = None
 
 
+def format_date(date):
+    result = ''
+    _format = '%Y-%m-%d %H:%M:%S'
+    if date is not None:
+        result = f'{date}'
+        if isinstance(date, np.datetime64):
+            result = pd.to_datetime(date, unit='ms').strftime(_format)
+        elif isinstance(date, datetime):
+            result = date.strftime(_format)
+
+    return result
+
+
 def get_client() -> Client:
     global client
     if client is None:
