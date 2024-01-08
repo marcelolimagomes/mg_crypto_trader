@@ -85,45 +85,47 @@ class RoboTraderIndex():
         '''
 
         if purchased:
-            msg = f'[BNC]*PURCHASED*: {self._symbol}_{self._interval} {strategy} TM: {target_margin:.2f}% '
+            msg = f'*PURCHASED*: {self._symbol}_{self._interval} {strategy} TM: {target_margin:.2f}% '
             msg += f'PP: ${purchased_price:.6f} AP: ${actual_price:.6f} MO: {100*margin_operation:.2f}% AI: ${amount_invested:.2f} '
             msg += f'PnL: ${profit_and_loss:.2f} TP: ${take_profit:.6f} SL: ${stop_loss:.6f} B: ${balance:.2f} {p_ema_label}: ${p_ema_value:.6f}'
-        else:
-            msg = f'[BNC]<NOT PURCHASED>: {self._symbol}_{self._interval} AP: ${actual_price:.6f} B: ${balance:.2f} TM: {target_margin:.2f}% {p_ema_label}: ${p_ema_value:.6f}'
+        # else:
+        #    msg = f'[BNC]<NOT PURCHASED>: {self._symbol}_{self._interval} AP: ${actual_price:.6f} B: ${balance:.2f} TM: {target_margin:.2f}% {p_ema_label}: ${p_ema_value:.6f}'
         self.log.info(f'{msg}')
         sm.send_status_to_telegram(msg)
 
     def log_buy(self, open_time, strategy, purchased_price, amount_invested, balance, target_margin, take_profit, stop_loss, rsi, restored=False):
+        '''
         _open_time = open_time
         if open_time is not None:
             if isinstance(open_time, np.datetime64):
                 _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
             else:
                 _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
-
+        '''
         status = ''
         if restored:
             status = '-RESTORED'
 
-        msg = f'[BINANCE]*BUYING{status}*: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% - '
-        msg += f'PP: $ {purchased_price:.6f} - AI: $ {amount_invested:.2f} - TP: $ {take_profit:.6f} - '
-        msg += f'SL: $ {stop_loss:.6f} - RSI: {rsi:.2f} - B: $ {balance:.2f}'
+        msg = f'{self._symbol}_{self._interval}: *BUYING{status}*:  OT: {open_time} St: {strategy} TM: {target_margin:.2f}% '
+        msg += f'PP: $ {purchased_price:.6f} AI: $ {amount_invested:.2f} TP: $ {take_profit:.6f} '
+        msg += f'SL: $ {stop_loss:.6f} RSI: {rsi:.2f} B: $ {balance:.2f}'
         self.log.info(f'{msg}')
         sm.send_to_telegram(msg)
 
     def log_selling(self, open_time, strategy, purchased_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance, take_profit,
                     stop_loss, target_margin, rsi):
+        '''
         _open_time = open_time
         if open_time is not None:
             if isinstance(open_time, np.datetime64):
                 _open_time = pd.to_datetime(open_time, unit='ms').strftime('%Y-%m-%d %H:%M:%S')
             else:
                 _open_time = open_time.strftime('%Y-%m-%d %H:%M:%S')
+        '''
 
-        sum_pnl = utils.get_sum_pnl()
-        msg = f'[BINANCE]*SELLING*: {self._symbol}_{self._interval} - OT: {_open_time} - St: {strategy} - TM: {target_margin:.2f}% '
-        msg += f'- PP: $ {purchased_price:.6f} - AP: $ {actual_price:.6f} - MO: {100*margin_operation:.2f}% - AI: $ {amount_invested:.2f} '
-        msg += f'- TP: $ {take_profit:.6f} - SL: $ {stop_loss:.6f} - RSI: {rsi:.2f} - B: $ {balance:.2f} - PnL O: $ {profit_and_loss:.2f} - Sum PnL: $ {sum_pnl:.2f}'
+        msg = f'{self._symbol}_{self._interval}: *SELLING* OT: {open_time} St: {strategy} TM: {target_margin:.2f}% '
+        msg += f'PP: $ {purchased_price:.6f} AP: $ {actual_price:.6f} MO: {100*margin_operation:.2f}% AI: $ {amount_invested:.2f} '
+        msg += f'TP: $ {take_profit:.6f} SL: $ {stop_loss:.6f} RSI: {rsi:.2f} B: $ {balance:.2f} PnL O: $ {profit_and_loss:.2f} '
         self.log.info(f'{msg}')
         sm.send_to_telegram(msg)
 
@@ -260,6 +262,15 @@ class RoboTraderIndex():
         balance = utils.get_account_balance()  # ok
         target_margin = self._target_margin
 
+        purchased_aux = False
+        purchased_price_aux = 0.00
+        margin_operation_aux = 0.00
+        profit_and_loss_aux = 0.00
+        amount_invested_aux = 0.00
+        strategy_aux = 'LONG'  # At time, only LONG is available
+        take_profit_aux = 0.00
+        stop_loss_aux = 0.00
+
         no_ammount_to_invest_count = 0
         while True:
             try:
@@ -278,6 +289,7 @@ class RoboTraderIndex():
                                                                        symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
                             status_buy, order_buy_id, order_sell_id = utils.register_operation(ledger_params)
                             if order_buy_id is not None:
+                                strategy_aux = 'LONG'
                                 purchased_price = float(order_buy_id['price'])
                                 executed_qty = float(order_buy_id['executedQty'])
                                 amount_invested = purchased_price * executed_qty
@@ -293,21 +305,35 @@ class RoboTraderIndex():
                             no_ammount_to_invest_count += 1
 
                 cont_aviso += 1
-                if cont_aviso > 100:  # send status to telegram each x loop
+                if cont_aviso > 50:  # send status to telegram each x loop
                     cont_aviso = 0
                     purchased, _, take_profit = utils.status_order_limit(self._symbol, self._interval)
                     if purchased:
+                        strategy_aux = 'LONG'
                         _, _, purchased_price, executed_qty, amount_invested = utils.status_order_buy(self._symbol, self._interval)
                         _, _, stop_loss = utils.status_order_stop(self._symbol, self._interval)
                         margin_operation = (actual_price - purchased_price) / purchased_price
                         profit_and_loss = amount_invested * margin_operation
-                    self.log_info(purchased, open_time, purchased_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
-                                  take_profit, stop_loss, target_margin, strategy, p_ema_label, p_ema_value)
+
+                        self.log_info(purchased, open_time, purchased_price, actual_price, margin_operation, amount_invested, profit_and_loss, balance,
+                                      take_profit, stop_loss, target_margin, strategy, p_ema_label, p_ema_value)
+
+                        purchased_aux = True
+                        purchased_price_aux = purchased_price
+                        margin_operation_aux = margin_operation
+                        profit_and_loss_aux = profit_and_loss
+                        amount_invested_aux = amount_invested
+                        take_profit_aux = take_profit
+                        stop_loss_aux = stop_loss
+                    elif purchased_aux:
+                        purchased_aux = False
+                        self.log_selling(open_time, strategy_aux, purchased_price_aux, actual_price, margin_operation_aux, amount_invested_aux,
+                                         profit_and_loss_aux, balance, take_profit_aux, stop_loss_aux, target_margin, rsi)
+
                     if no_ammount_to_invest_count > 0:
                         msg = f'No Amount to invest :Tryed {no_ammount_to_invest_count} times.  ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
                         sm.send_status_to_telegram(f'{self.ix}: {msg}')
                         no_ammount_to_invest_count = 0
-
             except Exception as e:
                 traceback.print_stack()
                 err_msg = f'ERROR: symbol: {self._symbol} - interval: {self._interval} - Exception: {e}'

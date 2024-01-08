@@ -934,11 +934,12 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
     log.info(f'Shape database on disk: {df_database.shape}')
 
     log.info(f'Filtering start date: {start_date}')
-    if parse_dates:
+    max_date = None
+    if df_database.shape[0] > 0 and parse_dates:
         df_database = df_database[df_database['open_time'] >= start_date]
         log.info(f'New shape after filtering start date. Shape: {df_database.shape}')
+        max_date = get_max_date(df_database, start_date=start_date)
 
-    max_date = get_max_date(df_database, start_date=start_date)
     max_date_aux = ''
     new_data = False
     if updata_data_from_web:
@@ -967,6 +968,7 @@ def get_data(symbol, save_database=False, interval='1h', tail=-1, columns=['open
     if tail > 0:
         df_database = df_database.tail(tail)
     return df_database
+
 
 def send_message(df_predict):
     message = f'Ticker: {df_predict["symbol"].values[0]} - Operação: {df_predict["prediction_label"].values[0]} - Valor Atual: {df_predict["close"].values[0]}'

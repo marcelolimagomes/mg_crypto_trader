@@ -46,7 +46,7 @@ range_max_rsi_start = 68
 
 
 # :::>>>
-default_amount_to_invest = 31.50
+default_amount_to_invest = 50.00
 
 min_amount_to_invest = 6.00
 
