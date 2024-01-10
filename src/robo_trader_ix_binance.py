@@ -307,7 +307,7 @@ class RoboTraderIndex():
                             no_ammount_to_invest_count += 1
 
                 cont_aviso += 1
-                if cont_aviso > 50:  # send status to telegram each x loop
+                if cont_aviso > 100:  # send status to telegram each x loop
                     cont_aviso = 0
                     purchased, _, take_profit = utils.status_order_limit(self._symbol, self._interval)
                     if purchased:
