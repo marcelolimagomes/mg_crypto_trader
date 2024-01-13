@@ -1,6 +1,6 @@
-from binance import AsyncClient as Client
+from binance import Client, helpers
 from binance.exceptions import BinanceAPIException
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import sys
 import traceback
@@ -11,10 +11,6 @@ import time
 
 import src.myenv as myenv
 import src.send_message as sm
-
-import asyncio
-
-loop = asyncio.new_event_loop()
 
 log = logging.getLogger()
 client: Client = None
@@ -42,7 +38,6 @@ def get_client() -> Client:
 
     return client
 
-
 def get_keys():
     with open(f'{sys.path[0]}/mg.key', 'r') as file:
         first_line = file.readline()
@@ -52,11 +47,10 @@ def get_keys():
         sec = first_line.split('##$$')[1]
         return key, sec
 
-
 def login_binance() -> Client:
     key, sec = get_keys()
-    _client = loop.run_until_complete(Client.create(key, sec, requests_params={'timeout': 20}, loop=loop))
-    # _client.REQUEST_TIMEOUT = 20
+    _client = Client(key, sec)
+    _client.REQUEST_TIMEOUT = 20
     return _client
 
 
@@ -110,7 +104,7 @@ def remove_cols_for_klines(columns):
 def get_klines(symbol, interval='1h', max_date='2010-01-01', limit=1000, columns=['open_time', 'close'], parse_dates=True):
     # return pd.DataFrame()
     start_time = datetime.now()
-    klines = loop.run_until_complete(get_client().get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit))
+    klines = get_client().get_historical_klines(symbol=symbol, interval=interval, start_str=max_date, limit=limit)
 
     columns = remove_cols_for_klines(columns)
 
@@ -213,7 +207,7 @@ def get_symbol_info(symbol):
     '''
         return symbol_info, symbol_precision, step_size, tick_size
     '''
-    symbol_info = loop.run_until_complete(get_client().get_symbol_info(symbol=symbol))
+    symbol_info = get_client().get_symbol_info(symbol=symbol)
     symbol_precision = int(symbol_info['baseAssetPrecision'])
     quote_precision = int(symbol_info['quoteAssetPrecision'])
     for filter in symbol_info['filters']:
@@ -237,7 +231,7 @@ def get_symbol_info(symbol):
 
 
 def get_account_balance(asset=myenv.asset_balance_currency):
-    asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset))
+    asset_balance = get_client().get_asset_balance(asset)
     balance = float(asset_balance['free'])
 
     return balance
@@ -264,7 +258,7 @@ def status_order_limit(symbol, interval):
     res_is_purchased = False
     take_profit = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_limit))
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id_limit)
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         take_profit = float(order['price'])
     except BinanceAPIException as e:
@@ -285,7 +279,7 @@ def status_order_stop(symbol, interval):
     res_is_purchased = False
     stop_loss = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_stop))
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id_stop)
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         stop_loss = float(order['stopPrice'])
     except Exception as e:
@@ -302,7 +296,7 @@ def status_order_buy(symbol, interval):
     executed_qty = 0.0
     amount_invested = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id))
+        order = get_client().get_order(symbol=symbol, origClientOrderId=id)
         res_is_buying = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         purchased_price = float(order['price'])
         executed_qty = float(order['executedQty'])
@@ -336,7 +330,7 @@ def register_operation(params):
         order_params['price'] = str(price_order)
         order_params['newClientOrderId'] = new_client_order_id
 
-        order_buy_id = loop.run_until_complete(get_client().order_limit_buy(**order_params))
+        order_buy_id = get_client().order_limit_buy(**order_params)
 
         info_msg = f'ORDER BUY: {order_params}'
         log.warn(info_msg)
@@ -349,7 +343,7 @@ def register_operation(params):
         while is_buying:
             if purchase_attemps > myenv.max_purchase_attemps:
                 if status == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
-                    loop.run_until_complete(get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id))
+                    get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id)
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
@@ -374,7 +368,7 @@ def register_operation(params):
 
 
 def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
-    filled_asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset))
+    filled_asset_balance = get_client().get_asset_balance(asset)
     int_quantity = filled_asset_balance['free'].split('.')[0]
     frac_quantity = filled_asset_balance['free'].split('.')[1][:quantity_precision]
     quantity = float(int_quantity + '.' + frac_quantity)
@@ -417,7 +411,7 @@ def register_oco_sell(params):
     log.warn(info_msg)
     # sm.send_to_telegram(info_msg)
 
-    oder_oco_sell_id = loop.run_until_complete(get_client().order_oco_sell(**oco_params))
+    oder_oco_sell_id = get_client().order_oco_sell(**oco_params)
     sm.send_status_to_telegram(info_msg + f' - oder_oco_sell_id: {oder_oco_sell_id}')
     log.warn(f'oder_oco_sell_id: {oder_oco_sell_id}')
     return oder_oco_sell_id

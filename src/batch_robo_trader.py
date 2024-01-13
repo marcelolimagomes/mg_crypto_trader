@@ -14,6 +14,11 @@ import threading
 import os
 
 
+def robo_run(params):
+    robo = RoboTraderIndex(params)
+    robo.run()
+
+
 class BatchRoboTrader:
     def __init__(self,
                  verbose,
@@ -185,6 +190,7 @@ class BatchRoboTrader:
 
         with Pool(processes=os.cpu_count()) as pool:
             self.log.info(f'Total Robo Trades to start...: {len(self._top_params_index)}')
+            results = []
             for param in self._top_params_index:
                 # print('twm>>>>> ', twm.start_kline_socket(callback=self.handle_socket_kline, args=param, symbol=param["symbol"], interval=param["interval"]))
                 ix_symbol = f'{param["symbol"]}_{param["interval"]}'
@@ -198,12 +204,16 @@ class BatchRoboTrader:
                 # param['mutex'] = mutex
                 # param['twm'] = twm
                 self.log.info(f'Starting Robo Trader for Symbol: {ix_symbol}')
-                robo = RoboTraderIndex(param)
+                # robo = RoboTraderIndex(param)
                 # self.log.info(f"Start ThreadedWebsocketManager: {twm.start_kline_socket(callback=robo.handle_socket_kline, symbol=param['symbol'], interval=param['interval'])}")
-                process = Process(target=robo.run, name=ix_symbol)
-                process.start()
+                res = pool.apply_async(robo_run, args=(param,))
+                results.append(res)
+
+                # process = Process(target=robo.run, name=ix_symbol)
+                # process.start()
                 # thread = threading.Thread(target=robo.run, name=ix_symbol)
                 # thread.start()
+            res.get()
 
         # self.log.info(f'Calling ThreadedWebsocketManager.join()')
         # twm.join()
