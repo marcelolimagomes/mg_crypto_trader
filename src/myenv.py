@@ -73,3 +73,4 @@ retrain_last_results = 100
 
 asset_balance_currency = 'USDT'
 max_purchase_attemps = 60
+recv_window = 10000

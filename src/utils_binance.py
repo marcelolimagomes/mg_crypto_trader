@@ -237,7 +237,7 @@ def get_symbol_info(symbol):
 
 
 def get_account_balance(asset=myenv.asset_balance_currency):
-    asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset))
+    asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset, recvWindow=myenv.recv_window))
     balance = float(asset_balance['free'])
 
     return balance
@@ -264,16 +264,16 @@ def status_order_limit(symbol, interval):
     res_is_purchased = False
     take_profit = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_limit))
+        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_limit, recvWindow=myenv.recv_window))
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         take_profit = float(order['price'])
     except BinanceAPIException as e:
         if e.code != -2013:
-            log.exception(f'is_purchased - ERROR: {e}')
-            sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
+            log.exception(f'status_order_limit - ERROR: {e}')
+            sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_limit - ERROR: {e}')
     except Exception as e:
-        log.exception(f'is_purchased - ERROR: {e}')
-        sm.send_status_to_telegram(f'{symbol}_{interval} - is_purchased - ERROR: {e}')
+        log.exception(f'status_order_limit - ERROR: {e}')
+        sm.send_status_to_telegram(f'{symbol}_{interval} - status_order_limit - ERROR: {e}')
 
     return res_is_purchased, order, take_profit
 
@@ -285,7 +285,7 @@ def status_order_stop(symbol, interval):
     res_is_purchased = False
     stop_loss = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_stop))
+        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id_stop, recvWindow=myenv.recv_window))
         res_is_purchased = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         stop_loss = float(order['stopPrice'])
     except Exception as e:
@@ -302,7 +302,7 @@ def status_order_buy(symbol, interval):
     executed_qty = 0.0
     amount_invested = 0.0
     try:
-        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id))
+        order = loop.run_until_complete(get_client().get_order(symbol=symbol, origClientOrderId=id, recvWindow=myenv.recv_window))
         res_is_buying = order['status'] in [Client.ORDER_STATUS_NEW, Client.ORDER_STATUS_PARTIALLY_FILLED]
         purchased_price = float(order['price'])
         executed_qty = float(order['executedQty'])
@@ -335,6 +335,7 @@ def register_operation(params):
         order_params['quantity'] = quantity
         order_params['price'] = str(price_order)
         order_params['newClientOrderId'] = new_client_order_id
+        order_params['recvWindow'] = myenv.recv_window
 
         order_buy_id = loop.run_until_complete(get_client().order_limit_buy(**order_params))
 
@@ -349,7 +350,7 @@ def register_operation(params):
         while is_buying:
             if purchase_attemps > myenv.max_purchase_attemps:
                 if status == Client.ORDER_STATUS_NEW:  # Can't buy after max_purchase_attemps, than cancel
-                    loop.run_until_complete(get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id))
+                    loop.run_until_complete(get_client().cancel_order(symbol=params['symbol'], origClientOrderId=new_client_order_id, recvWindow=myenv.recv_window))
                     err_msg = f'Can\'t buy {params["symbol"]} after {myenv.max_purchase_attemps} attemps'
                     log.error(err_msg)
                     sm.send_status_to_telegram(f'[ERROR]: {symbol}_{interval}: {err_msg}')
@@ -374,7 +375,7 @@ def register_operation(params):
 
 
 def get_asset_balance(asset=myenv.asset_balance_currency, quantity_precision: int = 2):
-    filled_asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset))
+    filled_asset_balance = loop.run_until_complete(get_client().get_asset_balance(asset, recvWindow=myenv.recv_window))
     int_quantity = filled_asset_balance['free'].split('.')[0]
     frac_quantity = filled_asset_balance['free'].split('.')[1][:quantity_precision]
     quantity = float(int_quantity + '.' + frac_quantity)
@@ -412,6 +413,7 @@ def register_oco_sell(params):
     oco_params['stopLimitTimeInForce'] = 'GTC'
     oco_params['limitClientOrderId'] = limit_client_order_id
     oco_params['stopClientOrderId'] = stop_client_order_id
+    oco_params['recvWindow'] = myenv.recv_window
 
     info_msg = f'ORDER SELL: {symbol}_{interval} - oco_params: {oco_params} - price_precision: {price_precision} - quantity_precision: {quantity_precision}'
     log.warn(info_msg)

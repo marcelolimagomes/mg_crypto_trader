@@ -263,6 +263,7 @@ class RoboTraderIndex():
 
         global balance
         balance = utils.get_account_balance()  # ok
+        self.log.info(f'{self.ix}: Initial Account Balance: ${balance}')
         target_margin = self._target_margin
 
         purchased_aux = False
@@ -292,7 +293,6 @@ class RoboTraderIndex():
                                                                        take_profit, stop_loss, actual_price, rsi, 0.0, 0.0, 0.0, strategy, balance,
                                                                        symbol_precision, quote_precision, quantity_precision, price_precision, step_size, tick_size)  # ok
                             self.log.info(f'>>> ledger_params: {ledger_params}')
-                            '''
                             status_buy, order_buy_id, order_sell_id = utils.register_operation(ledger_params)
                             if order_buy_id is not None:
                                 purchased_price = float(order_buy_id['price'])
@@ -304,7 +304,6 @@ class RoboTraderIndex():
                                 msg += f'TM: {target_margin:.2f}% RSI: {rsi:.2f}% B: ${balance:.{quote_precision}f} SELL: {"OK" if order_sell_id is not None else "ERROR"} '
                                 sm.send_to_telegram(msg)
                                 self.log.debug(msg)
-                            '''
                         else:
                             msg = f'No Amount to invest: ${balance:.{quote_precision}f} Min: ${myenv.min_amount_to_invest:.{quote_precision}f} '
                             self.log.warn(msg)
