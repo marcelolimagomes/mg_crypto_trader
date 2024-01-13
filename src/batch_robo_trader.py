@@ -204,16 +204,16 @@ class BatchRoboTrader:
                 # param['mutex'] = mutex
                 # param['twm'] = twm
                 self.log.info(f'Starting Robo Trader for Symbol: {ix_symbol}')
-                # robo = RoboTraderIndex(param)
+                robo = RoboTraderIndex(param)
                 # self.log.info(f"Start ThreadedWebsocketManager: {twm.start_kline_socket(callback=robo.handle_socket_kline, symbol=param['symbol'], interval=param['interval'])}")
-                res = pool.apply_async(robo_run, args=(param,))
-                results.append(res)
+                # res = pool.apply_async(robo_run, args=(param,))
+                # results.append(res)
 
-                # process = Process(target=robo.run, name=ix_symbol)
-                # process.start()
+                process = Process(target=robo.run, name=ix_symbol)
+                process.start()
                 # thread = threading.Thread(target=robo.run, name=ix_symbol)
                 # thread.start()
-            res.get()
+            # res.get()
 
         # self.log.info(f'Calling ThreadedWebsocketManager.join()')
         # twm.join()
